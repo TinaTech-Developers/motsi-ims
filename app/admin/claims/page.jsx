@@ -1,8 +1,7 @@
 "use client";
 import { useState } from "react";
 import MainLayout from "../components/MainLayout";
-import useAuth from "../../hooks/useAuth";
-
+import useAuth from "@/hooks/useAuth";
 
 export default function Page() {
   const { isLoading } = useAuth();

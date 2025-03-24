@@ -2,7 +2,7 @@
 import { useState } from "react";
 import MainLayout from "../components/MainLayout";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 
 function ClientList() {
   const { isLoading } = useAuth();

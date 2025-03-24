@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import MainLayout from "../components/MainLayout";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 
 function Category() {
   const { isLoading } = useAuth();

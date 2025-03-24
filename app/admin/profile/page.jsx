@@ -1,7 +1,7 @@
 "use client";
+import useAuth from "@/hooks/useAuth";
 import MainLayout from "../components/MainLayout";
 import { useState } from "react";
-import useAuth from "../../hooks/useAuth";
 
 const usersData = [
   { id: 1, name: "John Doe", email: "john@example.com", role: "Admin" },

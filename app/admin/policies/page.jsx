@@ -1,5 +1,5 @@
 "use client";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 import MainLayout from "../components/MainLayout";
 import { useState } from "react";
 import { FaTrashAlt } from "react-icons/fa";

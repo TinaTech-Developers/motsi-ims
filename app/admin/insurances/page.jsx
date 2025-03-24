@@ -2,7 +2,7 @@
 import React from "react";
 import MainLayout from "../components/MainLayout";
 import InsuranceTable from "./components/InsuranceTable";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "@/hooks/useAuth";
 
 function Insurance() {
   const { isLoading } = useAuth();

@@ -3,8 +3,6 @@ import React from "react";
 import MainLayout from "../components/MainLayout";
 import Image from "next/image";
 import { FaListUl } from "react-icons/fa";
-import { IoDocumentTextSharp, IoPeopleSharp } from "react-icons/io5";
-import useAuth from "../../hooks/useAuth";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -18,6 +16,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
+import useAuth from "@/hooks/useAuth";
 
 // Register Chart.js components
 ChartJS.register(
