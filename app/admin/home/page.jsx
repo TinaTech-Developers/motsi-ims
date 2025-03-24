@@ -1,8 +1,10 @@
 "use client";
+
 import React from "react";
 import MainLayout from "../components/MainLayout";
 import Image from "next/image";
 import { FaListUl } from "react-icons/fa";
+import { IoDocumentTextSharp, IoPeopleSharp } from "react-icons/io5";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -18,7 +20,7 @@ import {
 } from "chart.js";
 import useAuth from "@/hooks/useAuth";
 
-// Register Chart.js components
+// Register Chart.js components globally
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -35,7 +37,7 @@ function HomePage() {
   const { isLoading } = useAuth();
 
   if (isLoading) {
-    return null;
+    return null; // Alternatively, display a loading spinner
   }
 
   const metrics = [
@@ -97,7 +99,7 @@ function HomePage() {
       <div className="min-h-screen bg-gray-100 py- px-6 text-[#003366]">
         <h1 className="text-3xl font-bold text-center mb-6">Admin Dashboard</h1>
 
-        {/* Metrics Cards */}
+        {/* Metrics Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {metrics.map((metric, idx) => (
             <div
@@ -117,7 +119,6 @@ function HomePage() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Bar Chart */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
               Active Policies Over Time
@@ -125,7 +126,6 @@ function HomePage() {
             <Bar data={barData} />
           </div>
 
-          {/* Line Chart */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
               Clients Growth Over Years
@@ -133,7 +133,6 @@ function HomePage() {
             <Line data={lineData} />
           </div>
 
-          {/* Pie Chart */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
               Policy Status Distribution
@@ -143,15 +142,12 @@ function HomePage() {
         </div>
 
         {/* Image Section */}
-        {/* Image Section with Overview */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">
             Insured Vehicles Overview
           </h2>
           <p className="text-gray-600 mb-4">
-            This section provides an overview of all insured vehicles in the
-            system. You can track the number of vehicles insured, policy types,
-            and claim status for each vehicle.
+            Overview of insured vehicles, policy types, and claim status.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
