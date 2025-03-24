@@ -14,6 +14,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
+import useAuth from "@/hooks/useAuth";
 
 // Register Chart.js components
 ChartJS.register(
