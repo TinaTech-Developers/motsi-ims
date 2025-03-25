@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { type } from "os";
 
 const vehicleDataSchema = new mongoose.Schema({
   userId: { type: String, required: true },
@@ -9,9 +10,9 @@ const vehicleDataSchema = new mongoose.Schema({
   expiresIn: { type: String, required: true },
   phonenumber: { type: String, required: true },
   premium: { type: Number, required: true },
+  insurance: { type: String, required: true },
 });
 
-// Check if the model already exists; if not, create it
 const VehicleData =
   mongoose.models.VehicleData ||
   mongoose.model("VehicleData", vehicleDataSchema);

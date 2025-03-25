@@ -16,6 +16,7 @@ import {
   ArcElement,
 } from "chart.js";
 import useAuth from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
 
 // Register Chart.js components
 ChartJS.register(
@@ -31,24 +32,87 @@ ChartJS.register(
 );
 
 export default function Dashboard() {
-  const { isLoading } = useAuth();
+  const { isLoading } = useAuth() || { isLoading: false };
+  const [userId, setUserId] = useState(null);
+  const [data, setData] = useState([]);
+  const [clarionCount, setClarionCount] = useState(0);
 
-  if (isLoading) {
-    return null;
-  }
+  // Initialize userId from localStorage when the component mounts
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]); // Set empty data if userId is not found
+  }, []);
 
-  const metrics = [
-    { title: "Total Clients", count: 120, icon: <FaUsers size={24} /> },
-    { title: "Active Policies", count: 75, icon: <FaFileAlt size={24} /> },
-    { title: "Pending Claims", count: 15, icon: <FaCarCrash size={24} /> },
-    {
-      title: "Transactions Today",
-      count: 45,
-      icon: <AiOutlineTransaction size={24} />,
-    },
-  ];
+  // Calculate the status based on the 'zinaraend' date
+  const calculateStatus = (expiryDate) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
 
-  // Sample chart data
+    // Normalize the date to remove time part (if necessary) for correct comparison
+    today.setHours(0, 0, 0, 0);
+    expiry.setHours(0, 0, 0, 0);
+
+    const timeDiff = expiry - today; // Time difference in milliseconds
+    const oneDayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+    const daysUntilExpiry = timeDiff / oneDayInMs; // Days until expiry
+
+    if (expiry < today) return "Expired"; // If the expiry date has passed
+    if (daysUntilExpiry <= 7) return "About to Expire"; // If within the next 7 days
+    return "Active"; // Otherwise, it's active
+  };
+
+  // Fetch data once userId is available
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!userId) return; // If no userId, do not fetch data
+
+      try {
+        const response = await fetch(`/api/data/${userId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok)
+          throw new Error(`Failed to fetch data. Status: ${response.status}`);
+
+        const jsonData = await response.json();
+
+        // Set the full data for further processing
+        setData(jsonData.data);
+
+        // Set the clarion count directly from the API response
+        setClarionCount(jsonData.clarionCount);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert(`Failed to fetch insurance data: ${error.message}`);
+      }
+    };
+
+    fetchData();
+  }, [userId]);
+
+  // Calculate Clarion count after data is set
+  useEffect(() => {
+    if (data.length > 0) {
+      const clarionCount = data.filter(
+        (item) => item.insuranceProvider === "Clarion"
+      ).length;
+      setClarionCount(clarionCount); // Store the count in the state
+    }
+  }, [data]); // This will run whenever `data` changes
+
+  const policyDistributionData = {
+    labels: ["Clarion", "Cell", "Hamilton"], // Labels for your Pie chart
+    datasets: [
+      {
+        label: "Insurances",
+        data: [clarionCount, 1, 1], // Using clarionCount directly from the API
+        backgroundColor: ["#4F46E5", "#10B981", "#003366"], // Color for each section of the pie chart
+      },
+    ],
+  };
+
   const claimsData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
     datasets: [
@@ -58,17 +122,6 @@ export default function Dashboard() {
         borderColor: "rgba(75, 192, 192, 1)",
         backgroundColor: "rgba(75, 192, 192, 0.2)",
         tension: 0.4,
-      },
-    ],
-  };
-
-  const policyDistributionData = {
-    labels: ["Comprehensive", "Third-Party"],
-    datasets: [
-      {
-        label: "Policy Types",
-        data: [65, 35],
-        backgroundColor: ["#4F46E5", "#10B981"],
       },
     ],
   };
@@ -84,6 +137,10 @@ export default function Dashboard() {
     ],
   };
 
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-gray-100 py- px-6 text-[#003366]">
@@ -92,16 +149,41 @@ export default function Dashboard() {
 
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {metrics.map((metric, idx) => (
+            {[
+              {
+                title: "Total Clients",
+                count: data.length,
+                icon: <FaUsers size={24} />,
+              },
+              {
+                title: "Active Policies",
+                count: data.filter((client) => client.expiresIn === "Active")
+                  .length,
+                icon: <FaFileAlt size={24} />,
+              },
+              {
+                title: "About to Expire",
+                count: data.filter(
+                  (client) => client.expiresIn === "About to Expire"
+                ).length,
+                icon: <FaCarCrash size={24} />,
+              },
+              {
+                title: "Expired Policies",
+                count: data.filter((client) => client.expiresIn === "Expired")
+                  .length,
+                icon: <AiOutlineTransaction size={24} />,
+              },
+            ].map((metric, idx) => (
               <div
                 key={idx}
-                className="bg-white shadow rounded-lg p-6 flex items-center"
+                className="bg-white shadow rounded-lg p-6 flex items-center "
               >
                 <div className="p-4 bg-indigo-500 text-white rounded-full">
                   {metric.icon}
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold">{metric.title}</h3>
+                <div className="flex flex-col items-center justify-center ml-4">
+                  <h3 className="text- font-semibold">{metric.title}</h3>
                   <p className="text-2xl font-bold">{metric.count}</p>
                 </div>
               </div>
@@ -128,66 +210,6 @@ export default function Dashboard() {
               </h2>
               <Bar data={transactionsData} />
             </div>
-          </div>
-
-          {/* Recent Activities Section */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4">Recent Activities</h2>
-            <table className="min-w-full border border-gray-300 table-auto">
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="px-4 py-2 text-left">Client</th>
-                  <th className="px-4 py-2 text-left">Activity</th>
-                  <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  {
-                    client: "John Doe",
-                    activity: "Claim Filed",
-                    date: "2025-03-19",
-                    status: "Pending",
-                  },
-                  {
-                    client: "Jane Smith",
-                    activity: "Policy Renewed",
-                    date: "2025-03-18",
-                    status: "Completed",
-                  },
-                  {
-                    client: "Alice Johnson",
-                    activity: "New Policy Created",
-                    date: "2025-03-17",
-                    status: "Completed",
-                  },
-                  {
-                    client: "Bob Brown",
-                    activity: "Claim Approved",
-                    date: "2025-03-16",
-                    status: "Approved",
-                  },
-                ].map((act, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-100">
-                    <td className="px-4 py-3">{act.client}</td>
-                    <td className="px-4 py-3">{act.activity}</td>
-                    <td className="px-4 py-3">{act.date}</td>
-                    <td
-                      className={`px-4 py-3 font-semibold ${
-                        act.status === "Pending"
-                          ? "text-yellow-500"
-                          : act.status === "Approved"
-                          ? "text-green-600"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {act.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

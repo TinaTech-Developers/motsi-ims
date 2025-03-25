@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
 import useAuth from "@/hooks/useAuth";
 
@@ -26,28 +26,102 @@ export default function Page() {
       dateSubmitted: "2025-03-12",
     },
   ]);
-
+  const [userId, setUserId] = useState(null);
+  const [data, setData] = useState([]);
+  const [formData, setFormData] = useState({
+    clientname: "",
+    policynumber: "",
+    amount: "",
+    details: "",
+    submissiondate: "",
+  });
   const [showClaimForm, setShowClaimForm] = useState(false);
 
   const toggleForm = () => setShowClaimForm(!showClaimForm);
 
-  const handleAddClaim = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
 
-    const newClaim = {
-      id: claims.length + 1,
-      clientName: formData.get("clientName"),
-      policyNumber: formData.get("policyNumber"),
-      claimAmount: parseFloat(formData.get("claimAmount")),
-      claimDetails: formData.get("claimDetails"),
-      status: "Pending",
-      dateSubmitted: new Date().toISOString().split("T")[0],
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!userId) return;
+
+      try {
+        const response = await fetch(`/api/clientsclaims/${userId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch client claims");
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setData(updatedData);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert(`Failed to fetch clients claims: ${error.message}`);
+      }
+    };
+    fetchData();
+  }, [userId]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!userId) {
+      alert("User Not Logged in");
+      return;
+    }
+
+    const newClient = {
+      clientname: formData.clientname.trim(),
+      policynumber: formData.policynumber.trim(),
+      amount: formData.amount.trim(),
+      details: formData.details.trim(),
+      submissiondate: new Date().toISOString().split("T")[0], // Current date in YYYY-MM-DD format
     };
 
-    setClaims([...claims, newClaim]);
-    e.currentTarget.reset();
-    setShowClaimForm(false);
+    for (const key in newClient) {
+      if (!newClient[key]) {
+        alert(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/clientsclaims/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClient),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      setData([...data, result.data]);
+
+      // Reset form after successful submission
+      setFormData({
+        clientname: "",
+        policynumber: "",
+        amount: "",
+        details: "",
+        submissiondate: "",
+      });
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert(`Failed to submit claim: ${error.message}`);
+    }
   };
 
   if (isLoading) {
@@ -77,7 +151,7 @@ export default function Page() {
 
           {showClaimForm && (
             <form
-              onSubmit={handleAddClaim}
+              onSubmit={handleSubmit}
               className="space-y-5 border-t border-gray-200 pt-6"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -87,7 +161,9 @@ export default function Page() {
                   </label>
                   <input
                     type="text"
-                    name="clientName"
+                    name="clientname"
+                    value={formData.clientname}
+                    onChange={handleChange}
                     required
                     className="w-full p-3 border rounded-md focus:ring-2 focus:ring-indigo-500"
                   />
@@ -99,7 +175,9 @@ export default function Page() {
                   </label>
                   <input
                     type="text"
-                    name="policyNumber"
+                    name="policynumber"
+                    value={formData.policynumber}
+                    onChange={handleChange}
                     required
                     className="w-full p-3 border rounded-md focus:ring-2 focus:ring-indigo-500"
                   />
@@ -111,7 +189,9 @@ export default function Page() {
                   </label>
                   <input
                     type="number"
-                    name="claimAmount"
+                    name="amount"
+                    value={formData.amount}
+                    onChange={handleChange}
                     required
                     className="w-full p-3 border rounded-md focus:ring-2 focus:ring-indigo-500"
                   />
@@ -122,7 +202,9 @@ export default function Page() {
                     Claim Details
                   </label>
                   <textarea
-                    name="claimDetails"
+                    name="details"
+                    value={formData.details}
+                    onChange={handleChange}
                     required
                     rows={3}
                     className="w-full p-3 border rounded-md focus:ring-2 focus:ring-indigo-500"
@@ -165,26 +247,35 @@ export default function Page() {
                   </tr>
                 </thead>
                 <tbody>
-                  {claims.map((claim) => (
-                    <tr key={claim.id} className="border-b hover:bg-gray-100">
-                      <td className="px-4 py-3">{claim.clientName}</td>
-                      <td className="px-4 py-3">{claim.policyNumber}</td>
+                  {data.map((claim) => (
+                    <tr key={claim._id} className="border-b hover:bg-gray-100">
+                      <td className="px-4 py-3">{claim.clientname || "N/A"}</td>
                       <td className="px-4 py-3">
-                        ${claim.claimAmount.toFixed(2)}
+                        {claim.policynumber || "N/A"}
                       </td>
-                      <td className="px-4 py-3">{claim.claimDetails}</td>
+                      <td className="px-4 py-3">
+                        ${claim.amount ? claim.amount.toFixed(2) : "N/A"}
+                      </td>
+                      <td className="px-4 py-3">{claim.details || "N/A"}</td>
                       <td
                         className={`px-4 py-3 font-semibold ${
-                          claim.status === "Approved"
+                          claim.status === true || claim.status === "true"
                             ? "text-green-500"
-                            : claim.status === "Pending"
+                            : claim.status === false || claim.status === "false"
                             ? "text-yellow-500"
                             : "text-red-500"
                         }`}
                       >
-                        {claim.status}
+                        {claim.status === true || claim.status === "true"
+                          ? "Approved"
+                          : claim.status === false || claim.status === "false"
+                          ? "Pending"
+                          : "Unknown"}
                       </td>
-                      <td className="px-4 py-3">{claim.dateSubmitted}</td>
+
+                      <td className="px-4 py-3">
+                        {claim.submissiondate || "Unknown"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

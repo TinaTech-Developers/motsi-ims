@@ -15,9 +15,19 @@ export async function GET(req, { params }) {
   try {
     await dbConnect();
 
+    // Fetch user data from the vehicleData collection
     const userData = await vehicleData.find({ userId }).lean().exec();
 
-    return NextResponse.json({ data: userData || [] }, { status: 200 });
+    // Count the number of 'Clarion' insurance policies
+    const clarionCount = userData.filter(
+      (item) => item.insurance === "Clarion"
+    ).length;
+    console.log(clarionCount);
+    // Return both the insurance data and the clarion count
+    return NextResponse.json(
+      { data: userData, clarionCount }, // Include clarionCount in the response
+      { status: 200 }
+    );
   } catch (error) {
     console.error("GET Error:", error);
 
@@ -30,7 +40,6 @@ export async function GET(req, { params }) {
     );
   }
 }
-
 
 export async function POST(req, { params }) {
   const { userId } = params;
@@ -54,6 +63,7 @@ export async function POST(req, { params }) {
       expiresIn,
       phonenumber,
       premium,
+      insurance,
     } = body;
 
     // Validate all required fields
@@ -64,6 +74,7 @@ export async function POST(req, { params }) {
       !zinaraend ||
       !expiresIn ||
       !phonenumber ||
+      !insurance ||
       premium == null
     ) {
       return NextResponse.json(
@@ -82,6 +93,7 @@ export async function POST(req, { params }) {
       expiresIn,
       phonenumber,
       premium,
+      insurance,
     });
 
     await newData.save();

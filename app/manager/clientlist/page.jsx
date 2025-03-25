@@ -1,53 +1,104 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
 import useAuth from "@/hooks/useAuth";
 
 export default function ClientList() {
   const { isLoading } = useAuth();
 
-  const [clients, setClients] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@example.com",
-      phone: "123-456-7890",
-      policyNumber: "POL12345",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      phone: "987-654-3210",
-      policyNumber: "POL12346",
-    },
-  ]);
-
+  const [userId, setUserId] = useState(null);
+  const [data, setData] = useState([]);
+  const [formData, setFormData] = useState({
+    fullname: "",
+    email: "",
+    phone: "",
+    vehicle: "",
+  });
   const [showAddClientForm, setShowAddClientForm] = useState(false);
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!userId) return;
+
+      try {
+        const response = await fetch(`/api/clients/${userId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch data.");
+
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setData(updatedData);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert(`Failed to fetch clients: ${error.message}`);
+      }
+    };
+
+    fetchData();
+  }, [userId]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!userId) {
+      alert("User not logged in.");
+      return;
+    }
+
+    const newData = {
+      fullname: formData.fullname.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      vehicle: formData.vehicle.trim(),
+    };
+
+    for (const key in newData) {
+      if (!newData[key]) {
+        alert(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/clients/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      setData([...data, result.data]); // Add new client
+      setShowAddClientForm(false); // Close form on success
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert(`Failed to submit client: ${error.message}`);
+    }
+  };
 
   const toggleForm = () => setShowAddClientForm(!showAddClientForm);
 
-  const handleAddClient = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const newClient = {
-      id: clients.length + 1,
-      name: formData.get("name"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      policyNumber: formData.get("policyNumber"),
-    };
-
-    setClients([...clients, newClient]);
-    e.currentTarget.reset();
-    setShowAddClientForm(false);
-  };
-
-  if (isLoading) {
-    return null;
-  }
+  if (isLoading) return <p>Loading...</p>;
 
   return (
     <MainLayout>
@@ -57,97 +108,76 @@ export default function ClientList() {
 
           <button
             onClick={toggleForm}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none mb-6"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 mb-6"
           >
             {showAddClientForm ? "Cancel" : "Add New Client"}
           </button>
 
           {showAddClientForm && (
-            <form onSubmit={handleAddClient} className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Client Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  required
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Policy Number
-                </label>
-                <input
-                  type="text"
-                  name="policyNumber"
-                  required
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none"
-              >
+            <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+              <input
+                type="text"
+                name="fullname"
+                placeholder="Full Name"
+                required
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md focus:ring focus:ring-blue-500"
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                required
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md focus:ring focus:ring-blue-500"
+              />
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Phone"
+                required
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md focus:ring focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                name="vehicle"
+                placeholder="Vehicle"
+                required
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md focus:ring focus:ring-blue-500"
+              />
+              <button className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
                 Add Client
               </button>
             </form>
           )}
 
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Client List</h3>
-            <table className="min-w-full table-auto border-collapse border border-gray-300">
+          <h3 className="text-xl font-semibold mb-4">Client List</h3>
+          {data.length > 0 ? (
+            <table className="min-w-full border border-gray-300">
               <thead>
                 <tr className="bg-gray-200">
-                  {["Name", "Email", "Phone", "Policy Number"].map((col) => (
-                    <th
-                      key={col}
-                      className="px-4 py-2 text-left text-sm font-semibold text-gray-700"
-                    >
-                      {col}
-                    </th>
-                  ))}
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Vehicle</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client) => (
-                  <tr key={client.id} className="border-b">
-                    <td className="px-4 py-2">{client.name}</td>
-                    <td className="px-4 py-2">{client.email}</td>
-                    <td className="px-4 py-2">{client.phone}</td>
-                    <td className="px-4 py-2">{client.policyNumber}</td>
+                {data.map((client) => (
+                  <tr key={client._id}>
+                    <td className="text-center py-2">{client.fullname}</td>
+                    <td className="text-center py-2">{client.email}</td>
+                    <td className="text-center py-2">{client.phone}</td>
+                    <td className="text-center py-2">{client.vehicle}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : (
+            <p>No clients found.</p>
+          )}
         </div>
       </div>
     </MainLayout>

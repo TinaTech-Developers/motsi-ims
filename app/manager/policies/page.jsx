@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
 import useAuth from "@/hooks/useAuth";
 
@@ -29,22 +29,95 @@ export default function Page() {
     setShowCreatePolicyForm(!showCreatePolicyForm);
   };
 
-  const handleSubmitPolicy = (e) => {
+  const [userId, setUserId] = useState(null);
+  const [data, setData] = useState([]);
+  const [formData, setFormData] = useState({
+    policynumber: "",
+    policyholder: "",
+    policytype: "",
+    expirydate: "",
+  });
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!userId) return;
+
+      try {
+        const response = await fetch(`/api/policies/${userId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch client policies");
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setData(updatedData);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert(`Failed to fetch clients policies: ${error.message}`);
+      }
+    };
+    fetchData();
+  }, [userId]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+
+    console.log("Form Data Before Submit: ", formData); // Check the form data before submitting.
+
+    if (!userId) {
+      alert("User Not Logged in");
+      return;
+    }
 
     const newPolicy = {
-      id: policies.length + 1,
-      policyNumber: formData.get("policyNumber"),
-      name: formData.get("name"),
-      type: formData.get("type"),
-      expiry: formData.get("expiry"),
+      policynumber: formData.policynumber.trim(),
+      policyholder: formData.policyholder.trim(),
+      policytype: formData.policytype.trim(),
+      expirydate: formData.expirydate.trim(),
     };
 
-    setPolicies([...policies, newPolicy]);
-    setShowCreatePolicyForm(false);
-    form.reset();
+    for (const key in newPolicy) {
+      if (!newPolicy[key]) {
+        alert(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/policies/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPolicy),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      const result = await response.json();
+      setData([...data, result.data]);
+
+      setFormData({
+        policynumber: "",
+        policyholder: "",
+        policytype: "",
+        expirydate: "",
+      });
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert(`Failed to submit claim: ${error.message}`);
+    }
   };
 
   if (isLoading) {
@@ -65,14 +138,16 @@ export default function Page() {
           </button>
 
           {showCreatePolicyForm && (
-            <form onSubmit={handleSubmitPolicy} className="space-y-4 mb-6">
+            <form onSubmit={handleSubmit} className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Policy Number
                 </label>
                 <input
                   type="text"
-                  name="policyNumber"
+                  name="policynumber"
+                  value={formData.policynumber}
+                  onChange={handleChange}
                   required
                   className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -84,7 +159,9 @@ export default function Page() {
                 </label>
                 <input
                   type="text"
-                  name="name"
+                  name="policyholder"
+                  value={formData.policyholder}
+                  onChange={handleChange}
                   required
                   className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -95,7 +172,9 @@ export default function Page() {
                   Policy Type
                 </label>
                 <select
-                  name="type"
+                  name="policytype"
+                  value={formData.policytype}
+                  onChange={handleChange}
                   required
                   className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -110,7 +189,9 @@ export default function Page() {
                 </label>
                 <input
                   type="date"
-                  name="expiry"
+                  name="expirydate"
+                  value={formData.expirydate}
+                  onChange={handleChange}
                   required
                   className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -145,14 +226,20 @@ export default function Page() {
                 </tr>
               </thead>
               <tbody>
-                {policies.map((policy) => (
-                  <tr key={policy.id} className="border-b">
+                {data.map((policy) => (
+                  <tr key={policy._id} className="border-b">
                     <td className="py-2 px-4 text-gray-700">
-                      {policy.policyNumber}
+                      {policy.policynumber}
                     </td>
-                    <td className="py-2 px-4 text-gray-700">{policy.name}</td>
-                    <td className="py-2 px-4 text-gray-700">{policy.type}</td>
-                    <td className="py-2 px-4 text-gray-700">{policy.expiry}</td>
+                    <td className="py-2 px-4 text-gray-700">
+                      {policy.policyholder}
+                    </td>
+                    <td className="py-2 px-4 text-gray-700">
+                      {policy.policytype}
+                    </td>
+                    <td className="py-2 px-4 text-gray-700">
+                      {policy.expirydate}
+                    </td>
                   </tr>
                 ))}
               </tbody>

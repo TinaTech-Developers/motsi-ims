@@ -15,6 +15,7 @@ import {
   TableBody,
   TableContainer,
   Paper,
+  Grid,
 } from "@mui/material";
 
 const style = {
@@ -49,6 +50,7 @@ const InsuranceTable = () => {
     endDate: "",
     premium: "",
     phonenumber: "",
+    insurance: "",
   });
   const [userId, setUserId] = useState(null);
 
@@ -71,7 +73,12 @@ const InsuranceTable = () => {
         if (!response.ok) throw new Error("Failed to fetch data.");
 
         const jsonData = await response.json();
-        setData(jsonData.data || []);
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }));
+
+        setData(updatedData);
       } catch (error) {
         console.error("Fetch Error:", error);
         alert("Failed to fetch insurance data.");
@@ -80,6 +87,22 @@ const InsuranceTable = () => {
 
     fetchData();
   }, [userId]);
+
+  useEffect(() => {
+    const updateStatus = () => {
+      setData((prevData) =>
+        prevData.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }))
+      );
+    };
+
+    updateStatus(); // Initial update
+    const intervalId = setInterval(updateStatus, 86400000); // Update every 24 hours
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, []); // Empty dependency array to run once on mount
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -95,21 +118,26 @@ const InsuranceTable = () => {
     }
 
     const newData = {
-      vehiclereg: formData.vehicleId,
-      ownername: formData.ownerName,
+      vehiclereg: formData.vehicleId.trim(),
+      ownername: formData.ownerName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
-      zinaraend: formData.endDate,
+      zinaraend: formData.endDate.trim(),
       expiresIn: calculateStatus(formData.endDate),
-      phonenumber: formData.phonenumber,
+      phonenumber: formData.phonenumber.trim(),
       premium: Number(formData.premium),
+      insurance: formData.insurance.trim(),
     };
 
-    // Basic client-side validation
     for (const key in newData) {
-      if (!newData[key] && key !== "premium") {
+      if (!newData[key]) {
         alert(`Field "${key}" is required.`);
         return;
       }
+    }
+
+    if (isNaN(newData.premium) || newData.premium <= 0) {
+      alert("Premium must be a valid number greater than zero.");
+      return;
     }
 
     try {
@@ -119,14 +147,17 @@ const InsuranceTable = () => {
         body: JSON.stringify(newData),
       });
 
-      if (!response.ok) throw new Error("Failed to save data.");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
       const result = await response.json();
-      setData([...data, result.data]); // Update data state
-      handleClose(); // Close modal
+      setData([...data, result.data]); // Add new entry to state
+      handleClose();
     } catch (error) {
       console.error("Submit Error:", error);
-      alert("Failed to submit insurance data. Check console for details.");
+      alert(`Failed to submit insurance data: ${error.message}`);
     }
   };
 
@@ -152,13 +183,11 @@ const InsuranceTable = () => {
         </Box>
 
         {!userId ? (
-          <Typography variant="body1" color="error" sx={{ mt: 3 }}>
+          <Typography color="error" sx={{ mt: 3 }}>
             Please log in to view your insurance data.
           </Typography>
         ) : data.length === 0 ? (
-          <Typography variant="body1" sx={{ mt: 3 }}>
-            No insurance data found.
-          </Typography>
+          <Typography sx={{ mt: 3 }}>No insurance data found.</Typography>
         ) : (
           <Table>
             <TableHead>
@@ -166,11 +195,11 @@ const InsuranceTable = () => {
                 {[
                   "Vehicle ID",
                   "Owner Name",
-                  "Start Date",
                   "End Date",
                   "Status",
                   "Premium",
                   "Phone Number",
+                  "Insurance Type",
                 ].map((header) => (
                   <TableCell key={header} sx={{ fontWeight: "bold" }}>
                     {header}
@@ -181,12 +210,17 @@ const InsuranceTable = () => {
             <TableBody>
               {data.map((item) => (
                 <TableRow key={item._id}>
-                  <TableCell>{item.vehiclereg}</TableCell>
+                  <TableCell className="uppercase">
+                    {" "}
+                    {item.vehiclereg}
+                  </TableCell>
                   <TableCell>{item.ownername}</TableCell>
-                  <TableCell>{item.zinarastart}</TableCell>
                   <TableCell>
                     {item.zinaraend
-                      ? new Date(item.zinaraend).toLocaleDateString("en-US")
+                      ? new Date(item.zinaraend).toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          year: "2-digit",
+                        })
                       : "Invalid date"}
                   </TableCell>
                   <TableCell
@@ -203,6 +237,7 @@ const InsuranceTable = () => {
                   </TableCell>
                   <TableCell>${item.premium}</TableCell>
                   <TableCell>{item.phonenumber}</TableCell>
+                  <TableCell className="uppercase">{item.insurance}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -211,32 +246,88 @@ const InsuranceTable = () => {
       </TableContainer>
 
       <Modal open={open} onClose={handleClose}>
-        <Box sx={{ ...style, width: 500, borderRadius: 2 }}>
-          <Typography variant="h6" color="#003366" fontWeight={600}>
+        <Box sx={{ ...style, width: 500, padding: 3 }}>
+          <Typography variant="h6" gutterBottom>
             Add Insurance
           </Typography>
-          <Box component="form" noValidate>
-            {[
-              { label: "Vehicle ID", name: "vehicleId" },
-              { label: "Owner Name", name: "ownerName" },
-              { label: "Phone Number", name: "phonenumber" },
-              { label: "End Date", name: "endDate" },
-              { label: "Premium", name: "premium" },
-            ].map(({ label, name }) => (
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <TextField
-                key={name}
-                label={label}
-                name={name}
+                label="Vehicle ID"
+                name="vehicleId"
                 fullWidth
-                margin="normal"
                 onChange={handleChange}
               />
-            ))}
-            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleSubmit}>Submit</Button>
-            </Box>
-          </Box>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                label="Owner Name"
+                name="ownerName"
+                fullWidth
+                onChange={handleChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                label="Phone Number"
+                name="phonenumber"
+                fullWidth
+                onChange={handleChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                label="End Date"
+                type="date"
+                name="endDate"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: new Date().toISOString().split("T")[0] }}
+                fullWidth
+                onChange={handleChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                label="Premium"
+                name="premium"
+                fullWidth
+                onChange={handleChange}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                select
+                label="Insurance Type"
+                name="insurance"
+                fullWidth
+                onChange={handleChange}
+                SelectProps={{ native: true }}
+              >
+                <option value="">Select</option>
+                <option value="Clarion">Clarion</option>
+                <option value="Hamilton">Hamilton</option>
+                <option value="Cell Insurance">Cell Insurance</option>
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmit}
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                Submit
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
       </Modal>
     </div>
