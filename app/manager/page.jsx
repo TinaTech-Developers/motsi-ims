@@ -35,6 +35,7 @@ export default function Dashboard() {
   const { isLoading } = useAuth() || { isLoading: false };
   const [userId, setUserId] = useState(null);
   const [data, setData] = useState([]);
+  const [insurance, setInsurance] = useState([]);
   const [clarionCount, setClarionCount] = useState(0);
 
   // Initialize userId from localStorage when the component mounts
@@ -92,22 +93,80 @@ export default function Dashboard() {
     fetchData();
   }, [userId]);
 
-  // Calculate Clarion count after data is set
-  useEffect(() => {
-    if (data.length > 0) {
-      const clarionCount = data.filter(
-        (item) => item.insuranceProvider === "Clarion"
-      ).length;
-      setClarionCount(clarionCount); // Store the count in the state
-    }
-  }, [data]); // This will run whenever `data` changes
+  const clarion = data.filter(
+    (client) => client.insurance === "Clarion"
+  ).length;
+  const cell = data.filter((client) => client.insurance === "Cell").length;
+  const hamilton = data.filter(
+    (client) => client.insurance === "Hamilton"
+  ).length;
+
+  const januaryClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 0;
+  }).length;
+
+  const febuaryClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 1;
+  }).length;
+
+  const marchClientsCount = data.filter((client) => {
+    const clientStartDate = new Date(client.zinarastart); // Use zinarastart here
+    return clientStartDate.getMonth() === 2; // March is month 2 (0-based index)
+  }).length;
+
+  const aprilClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 3;
+  }).length;
+
+  const mayClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 4;
+  }).length;
+
+  const juneClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 5;
+  }).length;
+
+  const julyClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 6;
+  }).length;
+
+  const augustClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 7;
+  }).length;
+
+  const septClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 8;
+  }).length;
+
+  const octClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 9;
+  }).length;
+
+  const novClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 10;
+  }).length;
+
+  const decClientsCount = data.filter((client) => {
+    const clientDate = new Date(client.zinarastarts);
+    return clientDate.getMonth() === 11;
+  }).length;
 
   const policyDistributionData = {
     labels: ["Clarion", "Cell", "Hamilton"], // Labels for your Pie chart
     datasets: [
       {
         label: "Insurances",
-        data: [clarionCount, 1, 1], // Using clarionCount directly from the API
+        data: [clarion, cell, hamilton], // Using clarionCount directly from the API
         backgroundColor: ["#4F46E5", "#10B981", "#003366"], // Color for each section of the pie chart
       },
     ],
@@ -127,11 +186,37 @@ export default function Dashboard() {
   };
 
   const transactionsData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+    labels: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sept",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
     datasets: [
       {
         label: "Transactions",
-        data: [45, 60, 55, 70, 65, 50, 75],
+        data: [
+          januaryClientsCount,
+          febuaryClientsCount,
+          marchClientsCount,
+          aprilClientsCount,
+          mayClientsCount,
+          juneClientsCount,
+          julyClientsCount,
+          augustClientsCount,
+          septClientsCount,
+          octClientsCount,
+          novClientsCount,
+          decClientsCount,
+        ],
         backgroundColor: "rgba(59, 130, 246, 0.6)",
       },
     ],

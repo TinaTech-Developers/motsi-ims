@@ -1,32 +1,36 @@
 "use client";
+import React, { useEffect, useState } from "react";
 import useAuth from "@/hooks/useAuth";
 import MainLayout from "../components/MainLayout";
-import { useState } from "react";
 import { FaTrashAlt } from "react-icons/fa";
+import Error from "next/error";
 
 const AdminPoliciesPage = () => {
   const { isLoading } = useAuth();
+  const [policies, setPolicies] = useState([]);
 
-  const [policies, setPolicies] = useState([
-    {
-      id: 1,
-      vehicleId: "XYZ1234",
-      ownerName: "John Doe",
-      startDate: "2023-01-01",
-      endDate: "2024-01-01",
-      status: "Active",
-      premium: 1000,
-    },
-    {
-      id: 2,
-      vehicleId: "ABC5678",
-      ownerName: "Jane Smith",
-      startDate: "2023-02-15",
-      endDate: "2024-02-15",
-      status: "Expired",
-      premium: 1200,
-    },
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/policies", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch Policies");
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setPolicies(updatedData);
+      } catch (error) {
+        console.error("Fetch error", error);
+        alert("Failed to fetch policies data");
+      }
+    };
+
+    // Ensure fetchData runs only once after component mounts
+    fetchData();
+  }, []); // Empty array ensures this runs only on mount
 
   const [showForm, setShowForm] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
@@ -215,7 +219,7 @@ const AdminPoliciesPage = () => {
             </thead>
             <tbody>
               {policies.map((policy) => (
-                <tr key={policy.id} className="hover:bg-gray-100">
+                <tr key={policy._id} className="hover:bg-gray-100">
                   <td className="px-4 py-2">{policy.vehicleId}</td>
                   <td className="px-4 py-2">{policy.ownerName}</td>
                   <td className="px-4 py-2">{policy.startDate}</td>
