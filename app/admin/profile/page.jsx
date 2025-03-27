@@ -4,23 +4,23 @@ import { FaUserAlt } from "react-icons/fa"; // Person icon
 import MainLayout from "../components/MainLayout";
 import { jwtDecode } from "jwt-decode";
 import useAuth from "@/hooks/useAuth";
-
-const usersData = [
-  { id: 1, name: "John Doe", email: "john@example.com", role: "Admin" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Agent" },
-  { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "User" },
-];
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import CircularJSON from "circular-json";
 
 const AdminProfilePage = () => {
   const { isLoading } = useAuth();
-  const [users, setUsers] = useState(usersData);
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    role: "User",
-    password: "",
-  });
+  // const [users, setUsers] = useState(usersData);
+  const [user, setUser] = useState(null);
+  const [showAddUserForm, setShowAddUserForm] = useState(false);
   const [isAdminEditing, setIsAdminEditing] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("manager");
+  const [fullname, setFullname] = useState("");
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [data, setData] = useState([]);
   const [adminFormData, setAdminFormData] = useState({
     id: "",
     fullName: "",
@@ -28,8 +28,12 @@ const AdminProfilePage = () => {
     role: "",
     password: "",
   });
-  const [user, setUser] = useState(null);
-  const [showAddUserForm, setShowAddUserForm] = useState(false); // New state for the add user form
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    role: "User",
+    password: "",
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -70,6 +74,27 @@ const AdminProfilePage = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/register", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setData(updatedData);
+      } catch (error) {
+        console.error("Fetch Error", error);
+        toast.error("Failed to fetch users");
+      }
+    };
+    fetchData();
+  }, []);
+
   const handleAdminChange = (e) => {
     const { name, value } = e.target;
     setAdminFormData({
@@ -95,12 +120,8 @@ const AdminProfilePage = () => {
     setIsAdminEditing(false);
   };
 
-  const handleUserChange = (e) => {
-    setNewUser({ ...newUser, [e.target.name]: e.target.value });
-  };
-
   const addUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
+    if (!fullname || !email || !password || !role) {
       alert("All fields are required.");
       return;
     }
@@ -116,9 +137,92 @@ const AdminProfilePage = () => {
     setUsers(updatedUsers);
   };
 
-  const removeUser = (id) => {
-    const updatedUsers = users.filter((user) => user.id !== id);
-    setUsers(updatedUsers);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const userData = { email, password, role, fullname };
+
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle error response
+        setError(data.message);
+        setSuccessMessage(null);
+      } else {
+        // Handle success response
+        setSuccessMessage(data.message);
+        setError(null);
+      }
+      addUser();
+    } catch (error) {
+      console.error("Error occurred:", error);
+      setError("An unexpected error occurred. Please try again later.");
+      setSuccessMessage(null);
+    }
+  };
+  // Define the updateUser function
+  const updateUser = async (userId, newRole) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("You are not authorized. Please log in again.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/register/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: newRole }), // Sending the new role
+      });
+
+      const data = await response.json();
+
+      // Check the status code of the response explicitly
+      if (response.ok) {
+        // Only show success if the response is OK
+        toast.success(`User role updated to ${newRole} successfully`);
+
+        // If the response contains a single updated user, update the state
+        if (data.user) {
+          // Update the user in the data state
+          const updatedUsers = data.user
+            ? data.user._id === userId
+              ? { ...data.user, role: newRole }
+              : user // Keep the original state if the user isn't updated
+            : user; // Default to the current state if no user data is received.
+
+          // Update the state with the new role
+          setData((prevData) =>
+            prevData.map((user) => (user._id === userId ? updatedUsers : user))
+          );
+        }
+      } else {
+        // If response is not OK, show error message
+        toast.error(
+          `Failed to update user role: ${data.message || "Unknown error"}`
+        );
+        console.log("Error:", data.message);
+      }
+    } catch (error) {
+      // If there is a network or other unexpected error, show error message
+      toast.error(
+        `An error occurred while updating the user role: ${error.message}`
+      );
+      console.error("Error:", error);
+    }
   };
 
   if (isLoading) return <p>Loading...</p>;
@@ -249,7 +353,7 @@ const AdminProfilePage = () => {
       </div>
 
       {/* User Management Section */}
-      <section className="text-blue-600">
+      <section className="text-blue-600 px-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Manage Users
         </h2>
@@ -263,10 +367,7 @@ const AdminProfilePage = () => {
 
         {showAddUserForm && (
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              addUser();
-            }}
+            onSubmit={handleSubmit}
             className="mb-4 bg-gray-100 p-4 rounded-lg shadow-sm"
           >
             <h3 className="text-xl font-semibold mb-4">Add New User</h3>
@@ -278,8 +379,7 @@ const AdminProfilePage = () => {
                 <input
                   type="text"
                   name="name"
-                  value={newUser.name}
-                  onChange={handleUserChange}
+                  onChange={(e) => setFullname(e.target.value)}
                   className="mt-1 p-3 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -291,8 +391,7 @@ const AdminProfilePage = () => {
                 <input
                   type="email"
                   name="email"
-                  value={newUser.email}
-                  onChange={handleUserChange}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="mt-1 p-3 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -304,8 +403,7 @@ const AdminProfilePage = () => {
                 <input
                   type="password"
                   name="password"
-                  value={newUser.password}
-                  onChange={handleUserChange}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 p-3 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -316,27 +414,27 @@ const AdminProfilePage = () => {
                 </label>
                 <select
                   name="role"
-                  value={newUser.role}
-                  onChange={handleUserChange}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)} // Update role state
                   className="mt-1 p-3 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="User">User</option>
-                  <option value="Agent">Agent</option>
-                  <option value="Admin">Admin</option>
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="user">User</option>
                 </select>
               </div>
 
               <div className="mt-6 flex justify-end space-x-4">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   Add User
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddUserForm(false)} // Hide the form
-                  className="px-6 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+                  className="px-6 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
                 >
                   Cancel
                 </button>
@@ -345,44 +443,55 @@ const AdminProfilePage = () => {
           </form>
         )}
 
-        <table className="min-w-full bg-white border rounded-lg shadow-md">
-          <thead className="bg-blue-600 text-white">
-            <tr>
-              <th className="py-3 px-4 text-left">Name</th>
-              <th className="py-3 px-4 text-left">Email</th>
-              <th className="py-3 px-4 text-left">Role</th>
-              <th className="py-3 px-4 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-100">
-                <td className="py-3 px-4">{user.name}</td>
-                <td className="py-3 px-4">{user.email}</td>
-                <td>
-                  <select
-                    value={user.role}
-                    onChange={(e) => changeUserRole(user.id, e.target.value)}
-                    className="p-1 border rounded"
-                  >
-                    <option value="User">User</option>
-                    <option value="Agent">Agent</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </td>
-                <td className="py-3 px-4">
-                  <button
-                    onClick={() => removeUser(user.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </td>
+        {/* User Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto">
+            <thead>
+              <tr>
+                <th className="py-3 px-6 text-left">Name</th>
+                <th className="py-3 px-6 text-left">Email</th>
+                <th className="py-3 px-6 text-left">Role</th>
+                <th className="py-3 px-6 text-center">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((user) => (
+                <tr key={user._id}>
+                  <td className="py-3 px-6">{user.fullname}</td>
+                  <td className="py-3 px-6">{user.email}</td>
+                  <td className="py-3 px-6">{user.role}</td>
+                  <td className="py-3 px-6 text-xs">
+                    {/* Dynamically render the button based on the current role */}
+                    {user.role === "admin" ? (
+                      <button
+                        onClick={() => updateUser(user._id, "manager")}
+                        className="px-4 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 mr-2"
+                      >
+                        Promote to Manager
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => updateUser(user._id, "admin")}
+                        className="px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-yellow-600 mr-2"
+                      >
+                        Promote to Admin
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => removeUser(user.id)}
+                      className="px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >
+                      Remove User
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
+      <ToastContainer />
     </MainLayout>
   );
 };

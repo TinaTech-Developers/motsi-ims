@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -24,16 +26,18 @@ const LoginPage = () => {
         localStorage.setItem("token", data.token);
 
         if (data.role === "admin") {
-          router.push("/admin/home"); // Admin dashboard
+          router.push("/admin/home");
+          toast.success("Login successful! Welcome, Admin.");
         } else {
-          router.push(`/manager?userId=${data.userId}`); // Manager dashboard
+          router.push(`/manager?userId=${data.userId}`);
+          toast.success("Login successful! Welcome, Manager.");
         }
       } else {
-        alert(data.message);
+        toast.error(data.message || "Login failed. Please try again.");
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
@@ -42,7 +46,7 @@ const LoginPage = () => {
       <div className="w-full max-w-md p-6 space-y-8 bg-white rounded-lg shadow-lg">
         <h2 className="text-4xl font-bold text-center text-[#003366]">MIMS</h2>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6 ">
           <div>
             <label
               htmlFor="email"
@@ -96,14 +100,13 @@ const LoginPage = () => {
                 Forgot your password?
               </a>
             </div>
-            <div className="text-sm">
-              <a href="#" className="text-indigo-600 hover:text-indigo-500">
-                Sign up
-              </a>
-            </div>
+            <div className="text-sm"></div>
           </div>
         </form>
       </div>
+
+      {/* Add ToastContainer to display toasts globally */}
+      <ToastContainer />
     </div>
   );
 };

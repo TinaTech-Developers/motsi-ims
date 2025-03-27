@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import useAuth from "@/hooks/useAuth";
@@ -7,61 +7,97 @@ import useAuth from "@/hooks/useAuth";
 function ClientList() {
   const { isLoading } = useAuth();
 
-  const [clients, setClients] = useState([
-    {
-      id: 1,
-      name: "Tinashe Phiri",
-      email: "tinashephiri@example.com",
-      phone: "123-456-7890",
-      policyNumber: "POL12345",
-    },
-    {
-      id: 2,
-      name: "Tinotenda Phiri",
-      email: "tinophiri@example.com",
-      phone: "987-654-3210",
-      policyNumber: "POL12346",
-    },
-  ]);
+  const [clients, setClients] = useState([]);
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/clients", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("failed to fetch policies");
+        const jsonData = await response.json();
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+        }));
+        setClients(updatedData);
+      } catch (error) {
+        console.error("Fetch error", error);
+        alert("Failed to fetch clients");
+      }
+    };
+    fetchData();
+  }, []);
 
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [showAddClientForm, setShowAddClientForm] = useState(false);
+  const [formData, setFormData] = useState({
+    fullname: "",
+    email: "",
+    phone: "",
+    vehicle: "",
+  });
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!userId) {
+      alert("User not logged in.");
+      return;
+    }
+
+    const newData = {
+      fullname: formData.fullname.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      vehicle: formData.vehicle.trim(),
+    };
+
+    for (const key in newData) {
+      if (!newData[key]) {
+        alert(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/clients/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      setData([...data, result.data]); // Add new client
+      setShowAddClientForm(false); // Close form on success
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert(`Failed to submit client: ${error.message}`);
+    }
+  };
 
   if (isLoading) return null;
 
   const toggleForm = () => {
     setShowForm(!showForm);
     setEditingClient(null);
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const clientData = {
-      id: editingClient
-        ? editingClient.id
-        : clients.length > 0
-        ? Math.max(...clients.map((c) => c.id)) + 1
-        : 1,
-      name: formData.get("name"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      policyNumber: formData.get("policyNumber"),
-    };
-
-    if (editingClient) {
-      setClients(
-        clients.map((client) =>
-          client.id === editingClient.id ? clientData : client
-        )
-      );
-    } else {
-      setClients([...clients, clientData]);
-    }
-
-    setShowForm(false);
-    e.currentTarget.reset();
   };
 
   const handleEdit = (client) => {
@@ -96,13 +132,14 @@ function ClientList() {
           </div>
 
           {showForm && (
-            <form onSubmit={handleFormSubmit} className="space-y-6 mb-6">
+            <form onSubmit={handleSubmit} className="space-y-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
-                  name="name"
+                  name="fullname"
                   placeholder="Client Name"
                   required
+                  onChange={handleChange}
                   defaultValue={editingClient?.name || ""}
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -111,6 +148,7 @@ function ClientList() {
                   name="email"
                   placeholder="Email"
                   required
+                  onChange={handleChange}
                   defaultValue={editingClient?.email || ""}
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -119,14 +157,16 @@ function ClientList() {
                   name="phone"
                   placeholder="Phone"
                   required
+                  onChange={handleChange}
                   defaultValue={editingClient?.phone || ""}
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="text"
-                  name="policyNumber"
-                  placeholder="Policy Number"
+                  name="vehicle"
+                  placeholder="Vehicle"
                   required
+                  onChange={handleChange}
                   defaultValue={editingClient?.policyNumber || ""}
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
@@ -142,10 +182,10 @@ function ClientList() {
 
           <table className="w-full border-collapse border border-gray-300">
             <thead>
-              <tr className="bg-gray-200">
-                {["Name", "Email", "Phone", "Policy Number", "Actions"].map(
+              <tr className="bg-gray-200 ">
+                {["Name", "Email", "Phone", "Vehicle", "Actions"].map(
                   (col, idx) => (
-                    <th key={idx} className="px-4 py-2">
+                    <th key={idx} className="px-4 py-2 text-start">
                       {col}
                     </th>
                   )
@@ -154,12 +194,12 @@ function ClientList() {
             </thead>
             <tbody>
               {clients.map((client) => (
-                <tr key={client.id} className="border-b hover:bg-gray-100">
-                  <td className="px-4 py-2">{client.name}</td>
-                  <td className="px-4 py-2">{client.email}</td>
-                  <td className="px-4 py-2">{client.phone}</td>
-                  <td className="px-4 py-2">{client.policyNumber}</td>
-                  <td className="px-4 py-2 space-x-2">
+                <tr key={client._id} className="border-b hover:bg-gray-100">
+                  <td className="px-4 py-2 text-start">{client.fullname}</td>
+                  <td className="px-4 py-2 text-start">{client.email}</td>
+                  <td className="px-4 py-2 text-start">{client.phone}</td>
+                  <td className="px-4 py-2 text-start">{client.vehicle}</td>
+                  <td className="px-4 py-2 text-start space-x-2">
                     <button
                       onClick={() => handleEdit(client)}
                       className="text-blue-600 hover:underline"
