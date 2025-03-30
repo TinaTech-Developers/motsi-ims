@@ -246,7 +246,7 @@ const InsuranceTable = () => {
       </TableContainer>
 
       <Modal open={open} onClose={handleClose}>
-        <Box sx={{ ...style, width: 500, padding: 3 }}>
+        <Box sx={{ ...style, width: 500, padding: 3, color: "#003366" }}>
           <Typography variant="h6" gutterBottom>
             Add Insurance
           </Typography>

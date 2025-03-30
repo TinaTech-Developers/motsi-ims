@@ -4,11 +4,20 @@ import useAuth from "@/hooks/useAuth";
 import MainLayout from "../components/MainLayout";
 import { FaTrashAlt } from "react-icons/fa";
 import Error from "next/error";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const AdminPoliciesPage = () => {
   const { isLoading } = useAuth();
   const [policies, setPolicies] = useState([]);
+  const [data, setData] = useState([]);
+  const [userId, setUserId] = useState(null);
 
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -35,64 +44,101 @@ const AdminPoliciesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [newPolicy, setNewPolicy] = useState({
-    vehicleId: "",
-    ownerName: "",
-    startDate: "",
-    endDate: "",
-    status: "Active",
-    premium: 0,
+    policynumber: "",
+    policyholder: "",
+    policytype: "",
+    expirydate: "",
   });
 
   const toggleForm = () => {
     setShowForm(!showForm);
     setEditingPolicy(null);
     setNewPolicy({
-      vehicleId: "",
-      ownerName: "",
-      startDate: "",
-      endDate: "",
-      status: "Active",
-      premium: 0,
+      policynumber: "",
+      policyholder: "",
+      policytype: "",
+      expirydate: "",
     });
   };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
 
+    // Prepare the policy data
     const policyData = {
       id: editingPolicy
         ? editingPolicy.id
         : policies.length > 0
         ? Math.max(...policies.map((p) => p.id)) + 1
         : 1,
-      vehicleId: newPolicy.vehicleId,
-      ownerName: newPolicy.ownerName,
-      startDate: newPolicy.startDate,
-      endDate: newPolicy.endDate,
-      status: newPolicy.status,
-      premium: Number(newPolicy.premium),
+      policynumber: newPolicy.policynumber,
+      policyholder: newPolicy.policyholder,
+      policytype: newPolicy.policytype,
+      expirydate: newPolicy.expirydate,
     };
 
-    if (editingPolicy) {
-      setPolicies(
-        policies.map((p) => (p.id === editingPolicy.id ? policyData : p))
-      );
-    } else {
-      setPolicies([...policies, policyData]);
+    // Call handleSubmit to actually submit the data
+    handleSubmit(policyData);
+  };
+
+  const handleSubmit = async (policyData) => {
+    // Removed the call to policyData.preventDefault()
+
+    console.log("Form Data Before Submit: ", policyData); // Check the form data before submitting.
+
+    if (!userId) {
+      alert("User Not Logged in");
+      return;
     }
 
-    toggleForm();
+    const newPolicy = {
+      policynumber: policyData.policynumber.trim(),
+      policyholder: policyData.policyholder.trim(),
+      policytype: policyData.policytype.trim(),
+      expirydate: policyData.expirydate.trim(),
+    };
+
+    for (const key in newPolicy) {
+      if (!newPolicy[key]) {
+        toast.error(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/policies/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPolicy),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      const result = await response.json();
+      setData([...data, result.data]);
+
+      // Reset the form data
+      setNewPolicy({
+        policynumber: "",
+        policyholder: "",
+        policytype: "",
+        expirydate: "",
+      });
+      toast.success("Policy added successfully!");
+    } catch (error) {
+      console.error("Submit Error:", error);
+      toast.error(`Failed to submit policy: ${error.message}`);
+    }
   };
 
   const handleEdit = (policy) => {
     setEditingPolicy(policy);
     setNewPolicy({
-      vehicleId: policy.vehicleId,
-      ownerName: policy.ownerName,
-      startDate: policy.startDate,
-      endDate: policy.endDate,
-      status: policy.status,
-      premium: policy.premium,
+      policynumber: policy.policynumber,
+      policyholder: policy.policyholder,
+      policytype: policy.policytype,
+      expirydate: policy.expirydate,
     });
     setShowForm(true);
   };
@@ -130,66 +176,47 @@ const AdminPoliciesPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Vehicle ID"
+                  placeholder="Pocicy Number e.g POL123"
                   required
-                  value={newPolicy.vehicleId}
+                  value={newPolicy.policynumber}
                   onChange={(e) =>
-                    setNewPolicy({ ...newPolicy, vehicleId: e.target.value })
+                    setNewPolicy({ ...newPolicy, policynumber: e.target.value })
                   }
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="text"
-                  placeholder="Owner Name"
+                  placeholder="Policy Holder Name"
                   required
-                  value={newPolicy.ownerName}
+                  value={newPolicy.policyholder}
                   onChange={(e) =>
-                    setNewPolicy({ ...newPolicy, ownerName: e.target.value })
+                    setNewPolicy({ ...newPolicy, policyholder: e.target.value })
                   }
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 />
-                <input
-                  type="date"
-                  required
-                  value={newPolicy.startDate}
-                  onChange={(e) =>
-                    setNewPolicy({ ...newPolicy, startDate: e.target.value })
-                  }
-                  className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="date"
-                  required
-                  value={newPolicy.endDate}
-                  onChange={(e) =>
-                    setNewPolicy({ ...newPolicy, endDate: e.target.value })
-                  }
-                  className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Premium"
-                  required
-                  value={newPolicy.premium}
-                  onChange={(e) =>
-                    setNewPolicy({
-                      ...newPolicy,
-                      premium: Number(e.target.value),
-                    })
-                  }
-                  className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
-                />
+
                 <select
-                  value={newPolicy.status}
+                  value={newPolicy.policytype}
                   onChange={(e) =>
-                    setNewPolicy({ ...newPolicy, status: e.target.value })
+                    setNewPolicy({ ...newPolicy, policytype: e.target.value })
                   }
                   className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Expired">Expired</option>
+                  <option value="Comprehensive">Comprehensive</option>
+                  <option value="Third-Party">Third-Party</option>
                 </select>
+                <input
+                  type="date"
+                  placeholder="Expiry Date"
+                  required
+                  value={newPolicy.expirydate}
+                  onChange={(e) =>
+                    setNewPolicy({ ...newPolicy, expirydate: e.target.value })
+                  }
+                  className="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                />
               </div>
+
               <button
                 type="submit"
                 className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
@@ -203,15 +230,13 @@ const AdminPoliciesPage = () => {
             <thead className="bg-gray-200">
               <tr>
                 {[
-                  "Vehicle ID",
-                  "Owner Name",
-                  "Start Date",
-                  "End Date",
-                  "Status",
-                  "Premium",
+                  "Policy Number",
+                  "Policy Holder",
+                  "Policy Type",
+                  "Expiry Date",
                   "Actions",
                 ].map((header) => (
-                  <th key={header} className="px-4 py-2">
+                  <th key={header} className="px-4 py-2 text-start">
                     {header}
                   </th>
                 ))}
@@ -219,13 +244,11 @@ const AdminPoliciesPage = () => {
             </thead>
             <tbody>
               {policies.map((policy) => (
-                <tr key={policy._id} className="hover:bg-gray-100">
-                  <td className="px-4 py-2">{policy.vehicleId}</td>
-                  <td className="px-4 py-2">{policy.ownerName}</td>
-                  <td className="px-4 py-2">{policy.startDate}</td>
-                  <td className="px-4 py-2">{policy.endDate}</td>
-                  <td className="px-4 py-2">{policy.status}</td>
-                  <td className="px-4 py-2">${policy.premium}</td>
+                <tr key={policy._id || policy.id} className="hover:bg-gray-100">
+                  <td className="px-4 py-2">{policy.policynumber}</td>
+                  <td className="px-4 py-2">{policy.policyholder}</td>
+                  <td className="px-4 py-2">{policy.policytype}</td>
+                  <td className="px-4 py-2">{policy.expirydate}</td>
                   <td className="px-4 py-2">
                     <button
                       onClick={() => handleEdit(policy)}
@@ -246,6 +269,7 @@ const AdminPoliciesPage = () => {
           </table>
         </div>
       </div>
+      <ToastContainer />
     </MainLayout>
   );
 };

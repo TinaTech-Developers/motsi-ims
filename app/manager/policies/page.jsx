@@ -8,22 +8,6 @@ export default function Page() {
   const { isLoading } = useAuth();
 
   const [showCreatePolicyForm, setShowCreatePolicyForm] = useState(false);
-  const [policies, setPolicies] = useState([
-    {
-      id: 1,
-      policyNumber: "POL12345",
-      name: "John Doe",
-      type: "Comprehensive",
-      expiry: "2025-05-20",
-    },
-    {
-      id: 2,
-      policyNumber: "POL12346",
-      name: "Jane Smith",
-      type: "Third-Party",
-      expiry: "2025-06-10",
-    },
-  ]);
 
   const handleToggleForm = () => {
     setShowCreatePolicyForm(!showCreatePolicyForm);

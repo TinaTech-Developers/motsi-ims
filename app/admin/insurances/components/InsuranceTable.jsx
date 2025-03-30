@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaEdit } from "react-icons/fa";
-import { MdDelete, MdEdit, MdOutlineDelete } from "react-icons/md";
+import { MdOutlineDelete } from "react-icons/md";
 
 const calculateStatus = (endDate) => {
   const end = new Date(endDate);
@@ -15,9 +15,79 @@ const calculateStatus = (endDate) => {
 
 const InsuranceTable = () => {
   const [data, setData] = useState([]);
-  const [showForm, setShowForm] = useState(false); // Add state to show/hide form
-  const [error, setError] = useState(""); // Define the error state
-  const [editingVehicle, setEditingVehicle] = useState(null); // State to store the vehicle being edited
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [formData, setFormData] = useState({
+    vehicleId: "",
+    ownerName: "",
+    endDate: "",
+    premium: "",
+    phonenumber: "",
+    insurance: "",
+  });
+  const [userId, setUserId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(""); // Search query state
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+    else setData([]);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!userId) {
+      alert("User not logged in.");
+      return;
+    }
+
+    const newData = {
+      vehiclereg: formData.vehicleId.trim(),
+      ownername: formData.ownerName.trim(),
+      zinarastart: new Date().toISOString().split("T")[0],
+      zinaraend: formData.endDate.trim(),
+      expiresIn: calculateStatus(formData.endDate),
+      phonenumber: formData.phonenumber.trim(),
+      premium: Number(formData.premium),
+      insurance: formData.insurance.trim(),
+    };
+
+    for (const key in newData) {
+      if (!newData[key]) {
+        alert(`Field "${key}" is required.`);
+        return;
+      }
+    }
+
+    if (isNaN(newData.premium) || newData.premium <= 0) {
+      alert("Premium must be a valid number greater than zero.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/data/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      setData([...data, result.data]); // Add new entry to state
+      setShowForm(false); // Hide the form after submission
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert(`Failed to submit insurance data: ${error.message}`);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,11 +98,14 @@ const InsuranceTable = () => {
         });
         if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
+
+        // Update status for each item based on expiry date
         const updatedData = jsonData.data.map((item) => ({
           ...item,
           expiresIn: calculateStatus(item.zinaraend),
         }));
-        setData(jsonData.data);
+
+        setData(updatedData); // Set updated data with status
       } catch (error) {
         console.error("Fetch Error", error);
         alert("Failed to fetch insurance data");
@@ -41,45 +114,37 @@ const InsuranceTable = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const updateStatus = () => {
-      setData((prevData) =>
-        prevData.map((item) => ({
-          ...item,
-          expiresIn: calculateStatus(item.zinaraend),
-        }))
-      );
-    };
-
-    updateStatus(); // Initial update
-    const intervalId = setInterval(updateStatus, 86400000); // Update every 24 hours
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []); // Empty dependency array to run once on mount
-
   const handleDelete = async (vehicleId) => {
     try {
       const response = await fetch(`/api/data?id=${vehicleId}`, {
         method: "DELETE",
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Remove the deleted vehicle from the data array in state
-        setData(data.filter((vehicle) => vehicle._id !== vehicleId));
-      } else {
+      if (!response.ok) {
+        const data = await response.json();
         setError(data.message || "Failed to delete vehicle");
+        return; // Exit early if the deletion was not successful
+      }
+
+      const result = await response.json();
+      if (Array.isArray(result)) {
+        setData(result); // Directly set the new data array if it's returned
+      } else {
+        setData((prevData) =>
+          prevData.filter((vehicle) => vehicle._id !== vehicleId)
+        );
       }
     } catch (err) {
+      console.error("Error deleting vehicle:", err);
       setError("Error deleting vehicle");
     }
   };
 
   const toggleForm = (vehicle = null) => {
-    setEditingVehicle(vehicle); // If vehicle is passed, it's an edit action
-    setShowForm((prevState) => !prevState); // Toggle showForm state
+    setEditingVehicle(vehicle);
+    setShowForm((prevState) => !prevState); // This toggles the form visibility
   };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -92,30 +157,30 @@ const InsuranceTable = () => {
       premium: formData.get("premium"),
     };
 
-    // Validate that both 'vehicleId' and 'endDate' are present
     if (!vehicleData.vehicleId || !vehicleData.endDate) {
       setError("Vehicle ID and new 'zinaraend' value are required.");
       return;
     }
 
     if (editingVehicle) {
-      // Handle updating the vehicle's 'zinaraend'
       try {
         const response = await fetch(`/api/data?id=${editingVehicle._id}`, {
-          method: "PUT", // PUT request to update the vehicle
-          body: JSON.stringify({ zinaraend: vehicleData.endDate }), // Send only the updated 'zinaraend'
+          method: "PUT",
+          body: JSON.stringify({ zinaraend: vehicleData.endDate }),
           headers: { "Content-Type": "application/json" },
         });
 
         const data = await response.json();
-        console.log("Response Data:", data); // Add this line to see the full response
 
         if (response.ok) {
-          // If the response data is an object (updated vehicle), update accordingly
           setData((prevData) =>
             prevData.map((item) =>
               item._id === editingVehicle._id
-                ? { ...item, zinaraend: vehicleData.endDate }
+                ? {
+                    ...item,
+                    zinaraend: vehicleData.endDate,
+                    expiresIn: calculateStatus(vehicleData.endDate),
+                  }
                 : item
             )
           );
@@ -125,35 +190,24 @@ const InsuranceTable = () => {
           setError(data.message || "Failed to update vehicle");
         }
       } catch (error) {
-        console.error("Error updating vehicle:", error); // Log the actual error
         setError("Error updating vehicle");
       }
     } else {
-      // Handle adding a new vehicle (POST request)
-      try {
-        const response = await fetch("/api/data", {
-          method: "POST",
-          body: JSON.stringify(vehicleData),
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          setData((prevData) => [...prevData, data]);
-          setShowForm(false);
-        } else {
-          setError(data.message || "Failed to add vehicle");
-        }
-      } catch (error) {
-        setError("Error adding vehicle");
-      }
+      handleSubmit();
     }
   };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredData = data.filter((item) =>
+    item.vehiclereg.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-6">
       <div className="max-w-7xl mx-auto bg-white shadow-lg rounded-lg p-6">
-        {/* Error Display */}
         {error && (
           <div className="text-red-600 bg-red-100 p-4 mb-4 rounded">
             {error}
@@ -165,7 +219,7 @@ const InsuranceTable = () => {
             Insurance Records
           </h2>
           <button
-            onClick={() => toggleForm()} // Toggle the form visibility
+            onClick={() => toggleForm()}
             className={`px-4 py-2 rounded text-white ${
               showForm
                 ? "bg-red-600 hover:bg-red-700"
@@ -176,7 +230,18 @@ const InsuranceTable = () => {
           </button>
         </div>
 
-        {/* Show form when showForm is true */}
+        {/* Search input */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by Vehicle ID"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="p-3 border rounded focus:ring-2 focus:ring-blue-500 w-full md:w-1/4"
+          />
+        </div>
+
+        {/* Show form when 'showForm' is true */}
         {showForm && (
           <form onSubmit={handleFormSubmit} className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -185,6 +250,7 @@ const InsuranceTable = () => {
                 name="vehicleId"
                 placeholder="Vehicle ID"
                 required
+                onChange={handleChange}
                 defaultValue={editingVehicle?.vehiclereg || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
@@ -193,13 +259,16 @@ const InsuranceTable = () => {
                 name="ownerName"
                 placeholder="Owner Name"
                 required
+                onChange={handleChange}
                 defaultValue={editingVehicle?.ownername || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
-                type="date"
-                name="startDate"
+                type="text"
+                name="phonenumber"
                 required
+                placeholder="Phone No."
+                onChange={handleChange}
                 defaultValue={editingVehicle?.zinarastart || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
@@ -207,106 +276,129 @@ const InsuranceTable = () => {
                 type="date"
                 name="endDate"
                 required
+                onChange={handleChange}
                 defaultValue={editingVehicle?.zinaraend || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <select
-                name="status"
+                name="insurance"
                 required
+                onChange={handleChange}
                 defaultValue={editingVehicle?.expiresIn || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Active">Active</option>
-                <option value="Expired">Expired</option>
+                <option value="">Select</option>
+                <option value="Clarion">Clarion</option>
+                <option value="Hamilton">Hamilton</option>
+                <option value="Cell">Cell</option>
               </select>
               <input
                 type="number"
                 name="premium"
                 placeholder="Premium"
                 required
+                onChange={handleChange}
                 defaultValue={editingVehicle?.premium || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <button
               type="submit"
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+              className="px-4 py-2 rounded bg-green-600 text-white"
             >
-              {editingVehicle ? "Update Record" : "Add Record"}
+              {editingVehicle ? "Update" : "Submit"}
             </button>
           </form>
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-300">
-            <thead className="bg-blue-600 text-white">
-              <tr>
-                {[
-                  "Vehicle ID",
-                  "Owner Name",
-                  "Insurance",
-                  "End Date",
-                  "Status",
-                  "Premium",
-                  "Actions",
-                ].map((header) => (
-                  <th
-                    key={header}
-                    className="py-3 px-4 text-left text-sm font-semibold"
-                  >
-                    {header}
-                  </th>
-                ))}
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Vehicle ID
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Owner
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Insurance
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Zinara End
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Status
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Premium
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.map((item, idx) => (
-                <tr
-                  key={idx}
-                  className="hover:bg-gray-50 border-t border-gray-200"
-                >
-                  <td className="py-3 px-4 text-sm text-gray-700 uppercase">
-                    {item.vehiclereg}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    {item.ownername}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    {item.insurance}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    {item.zinaraend}
-                  </td>
-                  <td
-                    className={`py-3 px-4 text-sm font-semibold ${
-                      item.expiresIn === "Active"
-                        ? "text-green-600"
-                        : item.expiresIn === "About to Expire"
-                        ? "text-amber-300"
-                        : "text-red-600"
-                    }`}
+              {filteredData.length > 0 ? (
+                filteredData.map((item) => (
+                  <tr
+                    key={item._id}
+                    className="hover:bg-gray-50 border-t border-gray-200"
                   >
-                    {item.expiresIn}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700">
-                    ${item.premium.toFixed(2)}
-                  </td>
-                  <td className="flex items-center justify-center gap-3 py-3 px-4 text-sm">
-                    <button
-                      className="text-red-600 hover:underline"
-                      onClick={() => handleDelete(item._id)} // Pass vehicleId here
+                    <td className="py-3 px-4 text-sm text-gray-700 uppercase">
+                      {item.vehiclereg}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {item.ownername}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {item.insurance}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {item.zinaraend
+                        ? new Date(item.zinaraend).toLocaleDateString("en-US", {
+                            month: "2-digit",
+                            year: "2-digit",
+                          })
+                        : "Invalid date"}
+                    </td>
+                    <td
+                      className={`py-3 px-4 text-sm font-semibold ${
+                        item.expiresIn === "Active"
+                          ? "text-green-600"
+                          : item.expiresIn === "About to Expire"
+                          ? "text-amber-300"
+                          : "text-red-600"
+                      }`}
                     >
-                      <MdOutlineDelete size={22} />
-                    </button>
-                    <button
-                      className="text-red-600 hover:underline"
-                      onClick={() => toggleForm(item)} // Pass the vehicle data to toggle form for editing
-                    >
-                      <FaEdit size={22} color="blue" />
-                    </button>
+                      {item.expiresIn}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      ${item.premium.toFixed(2)}
+                    </td>
+                    <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
+                      <button
+                        className="text-red-600 hover:underline"
+                        onClick={() => handleDelete(item._id)}
+                      >
+                        <MdOutlineDelete size={22} />
+                      </button>
+                      <button
+                        className="text-blue-600 hover:underline"
+                        onClick={() => toggleForm(item)}
+                      >
+                        <FaEdit size={22} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                    No records found
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

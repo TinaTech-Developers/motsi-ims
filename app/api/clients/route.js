@@ -18,3 +18,14 @@ export async function GET(req) {
     );
   }
 }
+
+// DELETE Method to delete vehicle data by ID
+export async function DELETE(request) {
+  const id = request.nextUrl.searchParams.get("id");
+  await dbConnect();
+  await Clients.findByIdAndDelete(id);
+  return NextResponse.json(
+    { message: "Client Successfully Deleted" },
+    { status: 201 }
+  );
+}
