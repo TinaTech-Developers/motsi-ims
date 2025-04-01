@@ -76,16 +76,34 @@ export async function GET(req) {
 }
 
 // DELETE Method to Delete a User
-export async function DELETE({ request }) {
+export async function DELETE(request) {
   const id = request.nextUrl.searchParams.get("id");
-  await dbConnect();
-  await User.findByIdAndDelete(id);
-  return NextResponse.json(
-    {
-      message: "User Deleted Successfully",
-    },
-    { status: 201 }
-  );
+
+  if (!id) {
+    return NextResponse.json(
+      { message: "User ID is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await dbConnect();
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { message: "User Deleted Successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { message: "Server error", error: error.message },
+      { status: 500 }
+    );
+  }
 }
 
 // PUT Method to Update Password and Role
