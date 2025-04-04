@@ -73,12 +73,9 @@ const InsuranceTable = () => {
         if (!response.ok) throw new Error("Failed to fetch data.");
 
         const jsonData = await response.json();
-        const updatedData = jsonData.data.map((item) => ({
-          ...item,
-          expiresIn: calculateStatus(item.zinaraend),
-        }));
 
-        setData(updatedData);
+        // Updated data from backend will already have expiresIn calculated
+        setData(jsonData.data);
       } catch (error) {
         console.error("Fetch Error:", error);
         alert("Failed to fetch insurance data.");

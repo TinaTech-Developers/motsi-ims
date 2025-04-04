@@ -18,14 +18,32 @@ export async function GET(req, { params }) {
     // Fetch user data from the vehicleData collection
     const userData = await vehicleData.find({ userId }).lean().exec();
 
+    // Function to calculate status based on 'zinaraend' date
+    const calculateStatus = (endDate) => {
+      const end = new Date(endDate);
+      const today = new Date();
+      const diffTime = end.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) return "Expired";
+      if (diffDays <= 30) return "About to Expire";
+      return "Active";
+    };
+
+    // Map over the user data and calculate 'expiresIn' for each item
+    const updatedUserData = userData.map((item) => ({
+      ...item,
+      expiresIn: calculateStatus(item.zinaraend),
+    }));
+
     // Count the number of 'Clarion' insurance policies
-    const clarionCount = userData.filter(
+    const clarionCount = updatedUserData.filter(
       (item) => item.insurance === "Clarion"
     ).length;
-    console.log(clarionCount);
+
     // Return both the insurance data and the clarion count
     return NextResponse.json(
-      { data: userData, clarionCount }, // Include clarionCount in the response
+      { data: updatedUserData, clarionCount }, // Include clarionCount in the response
       { status: 200 }
     );
   } catch (error) {
