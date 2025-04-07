@@ -1,10 +1,7 @@
-import mongoose from "mongoose";
-import { NextResponse } from "next/server"; // Ensure this is imported for the response
-import dbConnect from "../../../../config/database"; // Adjust according to your file structure
-// Adjust the path as needed
-import Clients from "../../../../models/clients"; // Adjust the path as needed
+import { NextResponse } from "next/server";
+import dbConnect from "../../../../config/database";
+import Clients from "../../../../models/clients";
 
-// GET handler to fetch clients based on userId
 export async function GET(req, { params }) {
   const { userId } = params;
 
@@ -17,21 +14,38 @@ export async function GET(req, { params }) {
 
   try {
     await dbConnect();
-
-    // Fetch clients from the database
     const userData = await Clients.find({ userId }).lean().exec();
+    const calculateStatus = (endDate) => {
+      const end = new Date(endDate);
+      const today = new Date();
+      const diffTime = end.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    // Log retrieved data for debugging
-    console.log("Fetched Clients:", userData);
+      if (diffDays < 0) return "Expired";
+      if (diffDays <= 30) return "About to Expire";
+      return "Active";
+    };
+    const updatedUserData = userData.map((item) => ({
+      ...item,
+      expiresIn: calculateStatus(item.zinaraend),
+    }));
 
-    return NextResponse.json({ data: userData || [] }, { status: 200 });
+    const clarionCount = updatedUserData.filter(
+      (item) => item.insurance === "Clarion"
+    ).length;
+
+    return NextResponse.json(
+      { data: updatedUserData, clarionCount },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("GET Error:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred.";
+
     return NextResponse.json(
-      {
-        message: "Internal server error.",
-        error: error.message,
-      },
+      { message: "Internal server error.", error: errorMessage },
       { status: 500 }
     );
   }
@@ -51,7 +65,6 @@ export async function POST(req, { params }) {
   try {
     await dbConnect();
 
-    // Validate request body
     let body;
     try {
       body = await req.json();
@@ -72,7 +85,6 @@ export async function POST(req, { params }) {
       expiresIn,
     } = body;
 
-    // Check if all required fields are present
     if (
       !fullname ||
       !email ||
@@ -115,64 +127,52 @@ export async function POST(req, { params }) {
   }
 }
 
-// PUT handler to update expirydate of a specific client
-export async function PUT(req, { params }) {
-  const { userId, clientId } = params;
+//  put method
 
-  if (!userId || !clientId) {
+export async function PUT(req) {
+  const id = req.nextUrl.searchParams.get("id");
+  const { expirydate } = await req.json();
+
+  if (!id || !expirydate) {
     return NextResponse.json(
-      { message: "User ID and Client ID are required." },
-      { status: 400 }
+      {
+        message: "Vehicle ID and expirydate value are required",
+      },
+      {
+        status: 400,
+      }
     );
   }
+  await dbConnect();
 
   try {
-    await dbConnect();
-
-    // Validate request body
-    let body;
-    try {
-      body = await req.json();
-    } catch (error) {
-      return NextResponse.json(
-        { message: "Invalid JSON in request body.", error: error.message },
-        { status: 400 }
-      );
-    }
-
-    const { expirydate } = body;
-
-    // Check if the expirydate is provided
-    if (!expirydate) {
-      return NextResponse.json(
-        { message: "Expirydate is required." },
-        { status: 400 }
-      );
-    }
-
-    // Find and update the client
-    const updatedClient = await Clients.findOneAndUpdate(
-      { userId, _id: clientId }, // Find client by userId and clientId (MongoDB _id)
-      { expirydate }, // Update expirydate field
-      { new: true } // Return the updated document
+    const updatedClient = await Clients.findByIdAndUpdate(
+      id,
+      { expirydate },
+      { new: true }
     );
 
     if (!updatedClient) {
       return NextResponse.json(
-        { message: "Client not found." },
+        { message: "Vehicle data not found" },
         { status: 404 }
       );
     }
-
-    // Respond with the updated client data
     return NextResponse.json(
-      { message: "Expiry date updated successfully.", data: updatedClient },
+      {
+        message: "Client expirydate successfully updated",
+        data: updatedClient,
+      },
       { status: 200 }
     );
   } catch (error) {
-    console.error("PUT Error:", error);
+    console.error("Put Error", error);
+
     return NextResponse.json(
-      { message: "Internal server error.", error: error.message },
+      {
+        message: "Error Updating Client",
+        error: error.message || "Unknown error",
+      },
       { status: 500 }
     );
   }

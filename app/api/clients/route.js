@@ -29,3 +29,54 @@ export async function DELETE(request) {
     { status: 201 }
   );
 }
+
+//  put method
+
+export async function PUT(req) {
+  const id = req.nextUrl.searchParams.get("id");
+  const { expirydate } = await req.json();
+
+  if (!id || !expirydate) {
+    return NextResponse.json(
+      {
+        message: "Vehicle ID and expirydate value are required",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+  await dbConnect();
+
+  try {
+    const updatedClient = await Clients.findByIdAndUpdate(
+      id,
+      { expirydate },
+      { new: true }
+    );
+
+    if (!updatedClient) {
+      return NextResponse.json(
+        { message: "Vehicle data not found" },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(
+      {
+        message: "Client expirydate successfully updated",
+        data: updatedClient,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Put Error", error);
+
+    return NextResponse.json(
+      {
+        message: "Error Updating Client",
+        error: error.message || "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}

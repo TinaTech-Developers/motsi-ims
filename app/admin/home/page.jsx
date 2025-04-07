@@ -317,7 +317,7 @@ function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="p-4 bg-green-500 text-white rounded-lg">
               <h3 className="text-lg font-medium">Total Vehicles</h3>
-              <p className="text-2xl font-bold">{data.length}</p>
+              <p className="text-2xl font-bold">{insurances.length}</p>
             </div>
             <div className="p-4 bg-blue-500 text-white rounded-lg">
               <h3 className="text-lg font-medium">Active Policies</h3>
@@ -329,8 +329,13 @@ function HomePage() {
               </p>
             </div>
             <div className="p-4 bg-red-500 text-white rounded-lg">
-              <h3 className="text-lg font-medium">Pending Claims</h3>
-              <p className="text-2xl font-bold">12</p>
+              <h3 className="text-lg font-medium">Expired Insurances</h3>
+              <p className="text-2xl font-bold">
+                {
+                  insurances.filter((client) => client.expiresIn === "Expired")
+                    .length
+                }
+              </p>
             </div>
           </div>
 

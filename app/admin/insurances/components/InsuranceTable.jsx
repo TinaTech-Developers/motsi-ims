@@ -334,6 +334,9 @@ const InsuranceTable = () => {
                   Premium
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Phone No.
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
                 </th>
               </tr>
@@ -375,6 +378,9 @@ const InsuranceTable = () => {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       ${item.premium.toFixed(2)}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {item.phonenumber}
                     </td>
                     <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button

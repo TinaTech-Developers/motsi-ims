@@ -2,17 +2,65 @@ import { NextResponse } from "next/server";
 import dbConnect from "../../../config/database";
 import vehicleData from "../../../models/vehicledata";
 
-// GET Method to retrieve all vehicle data
+// // GET Method to retrieve all vehicle data
+// export async function GET(req) {
+//   try {
+//     await dbConnect();
+//     const vehicleDataAll = await vehicleData.find().lean().exec();
+
+//     return NextResponse.json({ data: vehicleDataAll || [] }, { status: 200 });
+//   } catch (error) {
+//     const errorMessage =
+//       error instanceof Error ? error.message : "Unknown error.";
+//     console.error("GET Error:", errorMessage);
+//     return NextResponse.json(
+//       { message: "Internal server error.", error: errorMessage },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function GET(req) {
   try {
     await dbConnect();
-    const vehicleDataAll = await vehicleData.find().lean().exec();
 
-    return NextResponse.json({ data: vehicleDataAll || [] }, { status: 200 });
+    // Fetch user data from the vehicleData collection
+    const userData = await vehicleData.find().lean().exec();
+
+    // Function to calculate status based on 'zinaraend' date
+    const calculateStatus = (endDate) => {
+      const end = new Date(endDate);
+      const today = new Date();
+      const diffTime = end.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) return "Expired";
+      if (diffDays <= 30) return "About to Expire";
+      return "Active";
+    };
+
+    // Map over the user data and calculate 'expiresIn' for each item
+    const updatedUserData = userData.map((item) => ({
+      ...item,
+      expiresIn: calculateStatus(item.zinaraend),
+    }));
+
+    // Count the number of 'Clarion' insurance policies
+    const clarionCount = updatedUserData.filter(
+      (item) => item.insurance === "Clarion"
+    ).length;
+
+    // Return both the insurance data and the clarion count
+    return NextResponse.json(
+      { data: updatedUserData, clarionCount }, // Include clarionCount in the response
+      { status: 200 }
+    );
   } catch (error) {
+    console.error("GET Error:", error);
+
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error.";
-    console.error("GET Error:", errorMessage);
+      error instanceof Error ? error.message : "Unknown error occurred.";
+
     return NextResponse.json(
       { message: "Internal server error.", error: errorMessage },
       { status: 500 }
