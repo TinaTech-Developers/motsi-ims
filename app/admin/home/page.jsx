@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "../components/MainLayout";
 import Image from "next/image";
-import { FaListUl } from "react-icons/fa";
+import Link from "next/link";
+import { FaListUl, FaArrowRight } from "react-icons/fa";
 import { IoDocumentTextSharp, IoPeopleSharp } from "react-icons/io5";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
@@ -38,143 +39,83 @@ function HomePage() {
   const { isLoading } = useAuth();
   const [data, setData] = useState([]);
   const [insurances, setInsurances] = useState([]);
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchClients = async () => {
       try {
-        const response = await fetch("/api/clients", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) throw new Error("Failed to fetch data");
+        const response = await fetch("/api/clients");
+        if (!response.ok) throw new Error("Failed to fetch clients");
         const jsonData = await response.json();
-        const updatedData = jsonData.data.map((item) => ({
-          ...item,
-        }));
         setData(jsonData.data);
       } catch (error) {
-        console.error("Fetch Error", error);
-        alert("Failed to fetch insurance data");
+        console.error("Client Fetch Error", error);
+        alert("Failed to fetch clients data");
       }
     };
-    fetchData();
+    fetchClients();
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInsurances = async () => {
       try {
-        const response = await fetch("/api/data", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) throw new Error("Failed to fetch data");
+        const response = await fetch("/api/data");
+        if (!response.ok) throw new Error("Failed to fetch insurances");
         const jsonData = await response.json();
-        const updatedData = jsonData.data.map((item) => ({
-          ...item,
-        }));
         setInsurances(jsonData.data);
       } catch (error) {
-        console.error("Fetch Error", error);
+        console.error("Insurance Fetch Error", error);
         alert("Failed to fetch insurance data");
       }
     };
-    fetchData();
+    fetchInsurances();
   }, []);
 
-  if (isLoading) {
-    return null; // Alternatively, display a loading spinner
-  }
+  if (isLoading) return null;
 
   const metrics = [
     {
       title: "Total Clients",
       count: data.length,
       icon: <BsPeople size={24} />,
+      href: "/admin/clientlist",
     },
     {
       title: "Active Policies",
       count: insurances.filter((client) => client.expiresIn === "Active")
         .length,
       icon: <IoDocumentTextSharp color="green" size={24} />,
+      href: "/admin",
     },
     {
       title: "Inactive Policies",
       count: insurances.filter((client) => client.expiresIn === "Expired")
         .length,
-      icon: <IoDocumentTextSharp color={"red"} size={24} />,
+      icon: <IoDocumentTextSharp color="red" size={24} />,
+      href: "/admin/expired",
     },
     {
       title: "Insured Vehicles",
       count: insurances.length,
       icon: <IoDocumentTextSharp size={24} />,
+      href: "/admin/insurances",
     },
     {
       title: "About to Expire",
       count: insurances.filter(
         (client) => client.expiresIn === "About to Expire"
       ).length,
-      icon: <IoDocumentTextSharp color="yellow" size={24} />,
+      icon: <IoDocumentTextSharp color="orange" size={24} />,
+      href: "/admin/abouttoexpire",
     },
   ];
 
-  const januaryClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 0;
-  }).length;
-
-  const febuaryClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 1;
-  }).length;
-
-  const marchClientsCount = insurances.filter((client) => {
-    const clientStartDate = new Date(client.zinarastart); // Use zinarastart here
-    return clientStartDate.getMonth() === 2; // March is month 2 (0-based index)
-  }).length;
-
-  const aprilClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 3;
-  }).length;
-
-  const mayClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 4;
-  }).length;
-
-  const juneClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 5;
-  }).length;
-
-  const julyClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 6;
-  }).length;
-
-  const augustClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 7;
-  }).length;
-
-  const septClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 8;
-  }).length;
-
-  const octClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 9;
-  }).length;
-
-  const novClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 10;
-  }).length;
-
-  const decClientsCount = insurances.filter((client) => {
-    const clientDate = new Date(client.zinarastarts);
-    return clientDate.getMonth() === 11;
-  }).length;
+  const monthlyCounts = Array.from(
+    { length: 12 },
+    (_, month) =>
+      insurances.filter(
+        (client) => new Date(client.zinarastarts).getMonth() === month
+      ).length
+  );
 
   const barData = {
     labels: [
@@ -194,35 +135,11 @@ function HomePage() {
     datasets: [
       {
         label: "Transactions",
-        data: [
-          januaryClientsCount,
-          febuaryClientsCount,
-          marchClientsCount,
-          aprilClientsCount,
-          mayClientsCount,
-          juneClientsCount,
-          julyClientsCount,
-          augustClientsCount,
-          septClientsCount,
-          octClientsCount,
-          novClientsCount,
-          decClientsCount,
-        ],
+        data: monthlyCounts,
         backgroundColor: "rgba(59, 130, 246, 0.6)",
       },
     ],
   };
-
-  // const barData = {
-  //   labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-  //   datasets: [
-  //     {
-  //       label: "Active Policies",
-  //       data: [50, 60, 70, 65, 80, 75],
-  //       backgroundColor: "rgba(75, 192, 192, 0.6)",
-  //     },
-  //   ],
-  // };
 
   const lineData = {
     labels: ["2021", "2022", "2023", "2024", "2025"],
@@ -237,51 +154,47 @@ function HomePage() {
     ],
   };
 
-  const clarion = insurances.filter(
-    (client) => client.insurance === "Clarion"
-  ).length;
-  const cell = insurances.filter(
-    (client) => client.insurance === "Cell"
-  ).length;
-  const hamilton = insurances.filter(
-    (client) => client.insurance === "Hamilton"
-  ).length;
-
   const policyDistributionData = {
-    labels: ["Clarion", "Cell", "Hamilton"], // Labels for your Pie chart
+    labels: ["Clarion", "Cell", "Hamilton"],
     datasets: [
       {
         label: "Insurances",
-        data: [clarion, cell, hamilton], // Using clarionCount directly from the API
-        backgroundColor: ["#4F46E5", "#10B981", "#003366"], // Color for each section of the pie chart
+        data: [
+          insurances.filter((client) => client.insurance === "Clarion").length,
+          insurances.filter((client) => client.insurance === "Cell").length,
+          insurances.filter((client) => client.insurance === "Hamilton").length,
+        ],
+        backgroundColor: ["#4F46E5", "#10B981", "#003366"],
       },
     ],
   };
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-gray-100 py- px-6 text-[#003366]">
+      <div className="min-h-screen bg-gray-100 py-8 px-6 text-[#003366]">
         <h1 className="text-3xl font-bold text-center mb-6">Admin Dashboard</h1>
 
-        {/* Metrics Section */}
+        {/* Metric Cards with Manual Links */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {metrics.map((metric, idx) => (
-            <div
+            <Link
               key={idx}
-              className="bg-white shadow rounded-lg p-6 flex items-center"
+              href={metric.href}
+              className="bg-white shadow hover:shadow-md rounded-lg p-6 flex items-center transition-all duration-200"
             >
               <div className="p-4 bg-blue-500 text-white rounded-full">
                 {metric.icon}
               </div>
-              <div className="ml-4">
+              <div className="ml-4 flex-1">
                 <h3 className="text-lg font-semibold">{metric.title}</h3>
                 <p className="text-2xl font-bold">{metric.count}</p>
               </div>
-            </div>
+              <FaArrowRight className="text-gray-400" />
+            </Link>
           ))}
         </div>
 
-        {/* Charts Section */}
+        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
@@ -289,14 +202,12 @@ function HomePage() {
             </h2>
             <Bar data={barData} />
           </div>
-
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
               Clients Growth Over Years
             </h2>
-            <Line data={barData} />
+            <Line data={lineData} />
           </div>
-
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">
               Policy Type Distribution
@@ -305,7 +216,7 @@ function HomePage() {
           </div>
         </div>
 
-        {/* Image Section */}
+        {/* Image Overview */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">
             Insured Vehicles Overview
