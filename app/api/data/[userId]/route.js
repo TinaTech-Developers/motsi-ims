@@ -75,6 +75,7 @@ export async function POST(req, { params }) {
     const body = await req.json(); // Parse request body
     const {
       vehiclereg,
+      vehicleName,
       ownername,
       zinarastart,
       zinaraend,
@@ -88,6 +89,7 @@ export async function POST(req, { params }) {
     if (
       !vehiclereg ||
       !ownername ||
+      !vehicleName ||
       !zinarastart ||
       !zinaraend ||
       !expiresIn ||
@@ -105,6 +107,7 @@ export async function POST(req, { params }) {
     const newData = new vehicleData({
       userId,
       vehiclereg,
+      vehicleName,
       ownername,
       zinarastart,
       zinaraend,

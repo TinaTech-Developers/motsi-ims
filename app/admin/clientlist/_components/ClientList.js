@@ -13,7 +13,7 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-const InsuranceTable = () => {
+const ClientTable = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
@@ -219,7 +219,7 @@ const InsuranceTable = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Insurance Records
+            Client Records
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -339,14 +339,14 @@ const InsuranceTable = () => {
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Zinara End
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Status
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Premium
-                </th>
+                </th> */}
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Vehicle
+                  Vehicle Name
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
@@ -380,7 +380,7 @@ const InsuranceTable = () => {
                           })
                         : "Invalid date"}
                     </td>
-                    <td
+                    {/* <td
                       className={`py-3 px-4 text-sm font-semibold ${
                         item.expiresIn === "Active"
                           ? "text-green-600"
@@ -390,10 +390,10 @@ const InsuranceTable = () => {
                       }`}
                     >
                       {item.expiresIn}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
+                    </td> */}
+                    {/* <td className="py-3 px-4 text-sm text-gray-700">
                       ${item.premium.toFixed(2)}
-                    </td>
+                    </td> */}
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}
                     </td>
@@ -431,4 +431,4 @@ const InsuranceTable = () => {
   );
 };
 
-export default InsuranceTable;
+export default ClientTable;

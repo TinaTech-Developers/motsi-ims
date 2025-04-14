@@ -46,6 +46,7 @@ const InsuranceTable = () => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     vehicleId: "",
+    vehicle: "",
     ownerName: "",
     endDate: "",
     premium: "",
@@ -116,6 +117,7 @@ const InsuranceTable = () => {
 
     const newData = {
       vehiclereg: formData.vehicleId.trim(),
+      vehicle: formData.vehicle.trim(),
       ownername: formData.ownerName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
       zinaraend: formData.endDate.trim(),
@@ -261,6 +263,14 @@ const InsuranceTable = () => {
             <Grid item xs={12}>
               <TextField
                 label="Owner Name"
+                name="ownerName"
+                fullWidth
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Vehicle Name"
                 name="ownerName"
                 fullWidth
                 onChange={handleChange}

@@ -88,6 +88,7 @@ export async function POST(req) {
     const {
       userId,
       vehiclereg,
+      vehicleName,
       ownername,
       zinarastart,
       zinaraend,
@@ -99,6 +100,7 @@ export async function POST(req) {
     if (
       !userId ||
       !vehiclereg ||
+      !vehicleName ||
       !ownername ||
       !zinarastart ||
       !zinaraend ||
@@ -115,6 +117,7 @@ export async function POST(req) {
     const newData = new vehicleData({
       userId,
       vehiclereg,
+      vehicleName, 
       ownername,
       zinarastart,
       zinaraend,
