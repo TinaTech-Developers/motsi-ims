@@ -17,6 +17,7 @@ import {
 } from "chart.js";
 import useAuth from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 // Register Chart.js components
 ChartJS.register(
@@ -239,12 +240,14 @@ export default function Dashboard() {
                 title: "Total Clients",
                 count: data.length,
                 icon: <FaUsers size={24} />,
+                href: "/manager/clientlist", // Replace with your actual route
               },
               {
                 title: "Active Policies",
                 count: data.filter((client) => client.expiresIn === "Active")
                   .length,
                 icon: <FaFileAlt size={24} />,
+                href: "/manager/active", // Replace with your actual route
               },
               {
                 title: "About to Expire",
@@ -252,26 +255,27 @@ export default function Dashboard() {
                   (client) => client.expiresIn === "About to Expire"
                 ).length,
                 icon: <FaCarCrash size={24} />,
+                href: "/manager/about-to-expire", // Replace with your actual route
               },
               {
                 title: "Expired Policies",
                 count: data.filter((client) => client.expiresIn === "Expired")
                   .length,
                 icon: <AiOutlineTransaction size={24} />,
+                href: "/manager/expired", // Replace with your actual route
               },
             ].map((metric, idx) => (
-              <div
-                key={idx}
-                className="bg-white shadow rounded-lg p-6 flex items-center "
-              >
-                <div className="p-4 bg-indigo-500 text-white rounded-full">
-                  {metric.icon}
+              <Link href={metric.href} key={idx} passHref>
+                <div className="bg-white shadow rounded-lg p-6 flex items-center cursor-pointer hover:shadow-md transition">
+                  <div className="p-4 bg-indigo-500 text-white rounded-full">
+                    {metric.icon}
+                  </div>
+                  <div className="flex flex-col items-center justify-center ml-4">
+                    <h3 className="font-semibold">{metric.title}</h3>
+                    <p className="text-2xl font-bold">{metric.count}</p>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center justify-center ml-4">
-                  <h3 className="text- font-semibold">{metric.title}</h3>
-                  <p className="text-2xl font-bold">{metric.count}</p>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
 

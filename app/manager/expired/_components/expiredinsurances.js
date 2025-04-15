@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdOutlineDelete } from "react-icons/md";
 
@@ -15,14 +13,13 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-const InsuranceTable = () => {
+const ExpiredInsurance = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [formData, setFormData] = useState({
     vehicleId: "",
-    vehicleName: "",
     ownerName: "",
     endDate: "",
     premium: "",
@@ -30,7 +27,7 @@ const InsuranceTable = () => {
     insurance: "",
   });
   const [userId, setUserId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(""); // Search query state
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -50,7 +47,6 @@ const InsuranceTable = () => {
 
     const newData = {
       vehiclereg: formData.vehicleId.trim(),
-      vehicleName: formData.vehicleName.trim(),
       ownername: formData.ownerName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
       zinaraend: formData.endDate.trim(),
@@ -93,61 +89,33 @@ const InsuranceTable = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const response = await fetch("/api/data", {
-  //         method: "GET",
-  //         headers: { "Content-Type": "application/json" },
-  //       });
-  //       if (!response.ok) throw new Error("Failed to fetch data");
-  //       const jsonData = await response.json();
-
-  //       // Update status for each item based on expiry date
-  //       const updatedData = jsonData.data.map((item) => ({
-  //         ...item,
-  //         expiresIn: calculateStatus(item.zinaraend),
-  //       }));
-
-  //       setData(updatedData); // Set updated data with status
-  //     } catch (error) {
-  //       console.error("Fetch Error", error);
-  //       alert("Failed to fetch insurance data");
-  //     }
-  //   };
-  //   fetchData();
-  // }, []);
-
-  // const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) setUserId(storedUserId);
-    else setData([]);
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       if (!userId) return;
-
       try {
         const response = await fetch(`/api/data/${userId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-
-        if (!response.ok) throw new Error("Failed to fetch data.");
-
+        if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
 
-        // Updated data from backend will already have expiresIn calculated
-        setData(jsonData.data);
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }));
+
+        // ✅ Only show expired ones
+        const expiredOnly = updatedData.filter(
+          (item) => item.expiresIn === "Expired"
+        );
+
+        setData(expiredOnly);
       } catch (error) {
-        console.error("Fetch Error:", error);
-        alert("Failed to fetch insurance data.");
+        console.error("Fetch Error", error);
+        alert("Failed to fetch insurance data");
       }
     };
-
     fetchData();
   }, [userId]);
 
@@ -160,12 +128,12 @@ const InsuranceTable = () => {
       if (!response.ok) {
         const data = await response.json();
         setError(data.message || "Failed to delete vehicle");
-        return; // Exit early if the deletion was not successful
+        return;
       }
 
       const result = await response.json();
       if (Array.isArray(result)) {
-        setData(result); // Directly set the new data array if it's returned
+        setData(result);
       } else {
         setData((prevData) =>
           prevData.filter((vehicle) => vehicle._id !== vehicleId)
@@ -179,7 +147,7 @@ const InsuranceTable = () => {
 
   const toggleForm = (vehicle = null) => {
     setEditingVehicle(vehicle);
-    setShowForm((prevState) => !prevState); // This toggles the form visibility
+    setShowForm((prevState) => !prevState);
   };
 
   const handleFormSubmit = async (e) => {
@@ -187,7 +155,6 @@ const InsuranceTable = () => {
     const formData = new FormData(e.target);
     const vehicleData = {
       vehicleId: formData.get("vehicleId"),
-      vehicleName: formData.get("vehicleName"),
       ownerName: formData.get("ownerName"),
       startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
@@ -254,7 +221,7 @@ const InsuranceTable = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Insurance Records
+            Expired Insurance Records
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -290,15 +257,6 @@ const InsuranceTable = () => {
                 required
                 onChange={handleChange}
                 defaultValue={editingVehicle?.vehiclereg || ""}
-                className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                name="vehicleName"
-                placeholder="Vehicle Name"
-                required
-                onChange={handleChange}
-                defaultValue={editingVehicle?.vehicleName || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -381,9 +339,6 @@ const InsuranceTable = () => {
                   Premium
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Vehicle
-                </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
@@ -415,22 +370,11 @@ const InsuranceTable = () => {
                           })
                         : "Invalid date"}
                     </td>
-                    <td
-                      className={`py-3 px-4 text-sm font-semibold ${
-                        item.expiresIn === "Active"
-                          ? "text-green-600"
-                          : item.expiresIn === "About to Expire"
-                          ? "text-amber-300"
-                          : "text-red-600"
-                      }`}
-                    >
+                    <td className="py-3 px-4 text-sm font-semibold text-red-600">
                       {item.expiresIn}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       ${item.premium.toFixed(2)}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.vehicleName}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.phonenumber}
@@ -453,8 +397,8 @@ const InsuranceTable = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
-                    No records found
+                  <td colSpan="8" className="text-center py-4 text-gray-500">
+                    No expired records found
                   </td>
                 </tr>
               )}
@@ -466,4 +410,4 @@ const InsuranceTable = () => {
   );
 };
 
-export default InsuranceTable;
+export default ExpiredInsurance;

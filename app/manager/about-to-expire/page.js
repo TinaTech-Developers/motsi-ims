@@ -2,7 +2,7 @@
 import React from "react";
 import MainLayout from "../components/MainLayout";
 import useAuth from "@/hooks/useAuth";
-import ClientTable from "./_components/ClientList";
+import AboutToExpireTable from "./_components/abouttoexpiretable";
 
 function page() {
   const { isLoading } = useAuth();
@@ -13,7 +13,7 @@ function page() {
   return (
     <MainLayout>
       <div className="w-full h-full bg-white text-black">
-        <ClientTable />
+        <AboutToExpireTable />
       </div>
     </MainLayout>
   );

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { MdOutlineDelete } from "react-icons/md";
@@ -15,7 +13,7 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-const InsuranceTable = () => {
+const ClientTable = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
@@ -93,61 +91,29 @@ const InsuranceTable = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const response = await fetch("/api/data", {
-  //         method: "GET",
-  //         headers: { "Content-Type": "application/json" },
-  //       });
-  //       if (!response.ok) throw new Error("Failed to fetch data");
-  //       const jsonData = await response.json();
-
-  //       // Update status for each item based on expiry date
-  //       const updatedData = jsonData.data.map((item) => ({
-  //         ...item,
-  //         expiresIn: calculateStatus(item.zinaraend),
-  //       }));
-
-  //       setData(updatedData); // Set updated data with status
-  //     } catch (error) {
-  //       console.error("Fetch Error", error);
-  //       alert("Failed to fetch insurance data");
-  //     }
-  //   };
-  //   fetchData();
-  // }, []);
-
-  // const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) setUserId(storedUserId);
-    else setData([]);
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       if (!userId) return;
-
       try {
         const response = await fetch(`/api/data/${userId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-
-        if (!response.ok) throw new Error("Failed to fetch data.");
-
+        if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
 
-        // Updated data from backend will already have expiresIn calculated
-        setData(jsonData.data);
+        // Update status for each item based on expiry date
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }));
+
+        setData(updatedData); // Set updated data with status
       } catch (error) {
-        console.error("Fetch Error:", error);
-        alert("Failed to fetch insurance data.");
+        console.error("Fetch Error", error);
+        alert("Failed to fetch insurance data");
       }
     };
-
     fetchData();
   }, [userId]);
 
@@ -254,7 +220,7 @@ const InsuranceTable = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Insurance Records
+            Client Records
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -374,21 +340,21 @@ const InsuranceTable = () => {
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Zinara End
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Status
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Premium
-                </th>
+                </th> */}
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Vehicle
+                  Vehicle Name
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -415,7 +381,7 @@ const InsuranceTable = () => {
                           })
                         : "Invalid date"}
                     </td>
-                    <td
+                    {/* <td
                       className={`py-3 px-4 text-sm font-semibold ${
                         item.expiresIn === "Active"
                           ? "text-green-600"
@@ -425,17 +391,17 @@ const InsuranceTable = () => {
                       }`}
                     >
                       {item.expiresIn}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
+                    </td> */}
+                    {/* <td className="py-3 px-4 text-sm text-gray-700">
                       ${item.premium.toFixed(2)}
-                    </td>
+                    </td> */}
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.phonenumber}
                     </td>
-                    <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
+                    {/* <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button
                         className="text-red-600 hover:underline"
                         onClick={() => handleDelete(item._id)}
@@ -448,7 +414,7 @@ const InsuranceTable = () => {
                       >
                         <FaEdit size={22} />
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ) : (
@@ -466,4 +432,4 @@ const InsuranceTable = () => {
   );
 };
 
-export default InsuranceTable;
+export default ClientTable;
