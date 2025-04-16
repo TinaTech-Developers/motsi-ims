@@ -20,6 +20,7 @@ const ActiveTable = () => {
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [formData, setFormData] = useState({
     vehicleId: "",
+    vehicleName: "",
     ownerName: "",
     endDate: "",
     premium: "",
@@ -77,6 +78,7 @@ const ActiveTable = () => {
 
     const newData = {
       vehiclereg: formData.vehicleId.trim(),
+      vehicleName: formData.vehicleName.trim(),
       ownername: formData.ownerName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
       zinaraend: formData.endDate.trim(),
@@ -150,6 +152,7 @@ const ActiveTable = () => {
     const formData = new FormData(e.target);
     const vehicleData = {
       vehicleId: formData.get("vehicleId"),
+      vehicleName: formData.get("vehicleName"),
       ownerName: formData.get("ownerName"),
       startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
@@ -368,20 +371,20 @@ const ActiveTable = () => {
                   <td className="px-6 py-4 text-sm text-gray-700">
                     {vehicle.phonenumber}
                   </td>
-                  {/* <td className="px-6 py-4 text-sm text-gray-700">
+                  <td className="px-6 py-4 text-sm text-gray-700">
                     <button
                       onClick={() => toggleForm(vehicle)}
                       className="text-blue-600 hover:text-blue-700 mr-4"
                     >
-                      <FaEdit />
+                      <FaEdit size={20} />
                     </button>
                     <button
                       onClick={() => handleDelete(vehicle._id)}
                       className="text-red-600 hover:text-red-700"
                     >
-                      <MdOutlineDelete />
+                      <MdOutlineDelete size={20} />
                     </button>
-                  </td> */}
+                  </td>
                 </tr>
               ))}
             </tbody>

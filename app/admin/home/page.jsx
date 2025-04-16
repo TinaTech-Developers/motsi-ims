@@ -35,6 +35,17 @@ ChartJS.register(
   ArcElement
 );
 
+const calculateStatus = (endDate) => {
+  const end = new Date(endDate);
+  const today = new Date();
+  const diffTime = end.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "Expired";
+  if (diffDays <= 30) return "About to Expire";
+  return "Active";
+};
+
 function HomePage() {
   const { isLoading } = useAuth();
   const [data, setData] = useState([]);
@@ -56,18 +67,29 @@ function HomePage() {
   }, []);
 
   useEffect(() => {
-    const fetchInsurances = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/data");
-        if (!response.ok) throw new Error("Failed to fetch insurances");
+        const response = await fetch("/api/data", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
-        setInsurances(jsonData.data);
+
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }));
+
+        // Save all updated data to state, not just expired
+        setInsurances(updatedData);
       } catch (error) {
-        console.error("Insurance Fetch Error", error);
+        console.error("Fetch Error", error);
         alert("Failed to fetch insurance data");
       }
     };
-    fetchInsurances();
+
+    fetchData();
   }, []);
 
   if (isLoading) return null;
@@ -75,7 +97,7 @@ function HomePage() {
   const metrics = [
     {
       title: "Total Clients",
-      count: data.length,
+      count: insurances.length,
       icon: <BsPeople size={24} />,
       href: "/admin/clientlist",
     },

@@ -20,6 +20,7 @@ const ExpiredInsurance = () => {
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [formData, setFormData] = useState({
     vehicleId: "",
+    vehicleName: "",
     ownerName: "",
     endDate: "",
     premium: "",
@@ -48,6 +49,7 @@ const ExpiredInsurance = () => {
     const newData = {
       vehiclereg: formData.vehicleId.trim(),
       ownername: formData.ownerName.trim(),
+      vehicleName: formData.vehicleName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
       zinaraend: formData.endDate.trim(),
       expiresIn: calculateStatus(formData.endDate),
@@ -257,6 +259,15 @@ const ExpiredInsurance = () => {
                 required
                 onChange={handleChange}
                 defaultValue={editingVehicle?.vehiclereg || ""}
+                className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                name="vehicleName"
+                placeholder="Vehicle Name"
+                required
+                onChange={handleChange}
+                defaultValue={editingVehicle?.vehicleName || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input

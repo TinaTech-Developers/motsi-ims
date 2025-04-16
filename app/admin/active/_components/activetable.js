@@ -13,7 +13,7 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-const ExpiredInsurance = () => {
+const ActiveTable = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +39,36 @@ const ExpiredInsurance = () => {
     if (storedUserId) setUserId(storedUserId);
     else setData([]);
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/data", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const jsonData = await response.json();
+
+        const updatedData = jsonData.data.map((item) => ({
+          ...item,
+          expiresIn: calculateStatus(item.zinaraend),
+        }));
+
+        const aboutToExpireData = updatedData.filter(
+          (item) => item.expiresIn === "Active"
+        );
+
+        setData(aboutToExpireData);
+      } catch (error) {
+        console.error("Fetch Error", error);
+        alert("Failed to fetch insurance data");
+      }
+    };
+    fetchData();
+  }, [userId]);
 
   const handleSubmit = async () => {
     if (!userId) {
@@ -83,42 +113,13 @@ const ExpiredInsurance = () => {
       }
 
       const result = await response.json();
-      setData([...data, result.data]); // Add new entry to state
-      setShowForm(false); // Hide the form after submission
+      setData([...data, result.data]);
+      setShowForm(false);
     } catch (error) {
       console.error("Submit Error:", error);
       alert(`Failed to submit insurance data: ${error.message}`);
     }
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/data", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) throw new Error("Failed to fetch data");
-        const jsonData = await response.json();
-
-        const updatedData = jsonData.data.map((item) => ({
-          ...item,
-          expiresIn: calculateStatus(item.zinaraend),
-        }));
-
-        // ✅ Only show expired ones
-        const expiredOnly = updatedData.filter(
-          (item) => item.expiresIn === "Expired"
-        );
-
-        setData(expiredOnly);
-      } catch (error) {
-        console.error("Fetch Error", error);
-        alert("Failed to fetch insurance data");
-      }
-    };
-    fetchData();
-  }, []);
 
   const handleDelete = async (vehicleId) => {
     try {
@@ -132,14 +133,9 @@ const ExpiredInsurance = () => {
         return;
       }
 
-      const result = await response.json();
-      if (Array.isArray(result)) {
-        setData(result);
-      } else {
-        setData((prevData) =>
-          prevData.filter((vehicle) => vehicle._id !== vehicleId)
-        );
-      }
+      setData((prevData) =>
+        prevData.filter((vehicle) => vehicle._id !== vehicleId)
+      );
     } catch (err) {
       console.error("Error deleting vehicle:", err);
       setError("Error deleting vehicle");
@@ -177,8 +173,6 @@ const ExpiredInsurance = () => {
           headers: { "Content-Type": "application/json" },
         });
 
-        const data = await response.json();
-
         if (response.ok) {
           setData((prevData) =>
             prevData.map((item) =>
@@ -194,6 +188,7 @@ const ExpiredInsurance = () => {
           setShowForm(false);
           setEditingVehicle(null);
         } else {
+          const data = await response.json();
           setError(data.message || "Failed to update vehicle");
         }
       } catch (error) {
@@ -223,7 +218,7 @@ const ExpiredInsurance = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Expired Insurance Records
+            Active Insurances
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -237,7 +232,6 @@ const ExpiredInsurance = () => {
           </button>
         </div>
 
-        {/* Search input */}
         <div className="mb-4">
           <input
             type="text"
@@ -248,7 +242,6 @@ const ExpiredInsurance = () => {
           />
         </div>
 
-        {/* Show form when 'showForm' is true */}
         {showForm && (
           <form onSubmit={handleFormSubmit} className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,7 +278,7 @@ const ExpiredInsurance = () => {
                 required
                 placeholder="Phone No."
                 onChange={handleChange}
-                defaultValue={editingVehicle?.zinarastart || ""}
+                defaultValue={editingVehicle?.phonenumber || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -296,18 +289,6 @@ const ExpiredInsurance = () => {
                 defaultValue={editingVehicle?.zinaraend || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
-              <select
-                name="insurance"
-                required
-                onChange={handleChange}
-                defaultValue={editingVehicle?.expiresIn || ""}
-                className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select</option>
-                <option value="Clarion">Clarion</option>
-                <option value="Hamilton">Hamilton</option>
-                <option value="Cell">Cell</option>
-              </select>
               <input
                 type="number"
                 name="premium"
@@ -317,102 +298,104 @@ const ExpiredInsurance = () => {
                 defaultValue={editingVehicle?.premium || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
+              <input
+                type="text"
+                name="insurance"
+                placeholder="Insurance Provider"
+                required
+                onChange={handleChange}
+                defaultValue={editingVehicle?.insurance || ""}
+                className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
+              />
             </div>
+
             <button
               type="submit"
-              className="px-4 py-2 rounded bg-green-600 text-white"
+              className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded"
             >
-              {editingVehicle ? "Update" : "Submit"}
+              {editingVehicle ? "Update Record" : "Add Record"}
             </button>
           </form>
         )}
 
         <div className="overflow-x-auto">
-          <table className="w-full table-auto">
+          <table className="min-w-full bg-white shadow-md rounded-lg">
             <thead>
-              <tr className="bg-gray-200">
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Vehicle ID
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Owner
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                  Owner Name
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Insurance
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Zinara End
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
+                  Expiry Date
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Status
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Premium
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Phone No.
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredData.length > 0 ? (
-                filteredData.map((item) => (
-                  <tr
-                    key={item._id}
-                    className="hover:bg-gray-50 border-t border-gray-200"
-                  >
-                    <td className="py-3 px-4 text-sm text-gray-700 uppercase">
-                      {item.vehiclereg}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.ownername}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.insurance}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.zinaraend
-                        ? new Date(item.zinaraend).toLocaleDateString("en-US", {
+              {filteredData.map((vehicle) => (
+                <tr key={vehicle._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-700 uppercase">
+                    {vehicle.vehiclereg}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {vehicle.ownername}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {vehicle.insurance}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {vehicle.zinaraend
+                      ? new Date(vehicle.zinaraend).toLocaleDateString(
+                          "en-US",
+                          {
                             month: "2-digit",
                             year: "2-digit",
-                          })
-                        : "Invalid date"}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-semibold text-red-600">
-                      {item.expiresIn}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      ${item.premium.toFixed(2)}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.phonenumber}
-                    </td>
-                    <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
-                      <button
-                        className="text-red-600 hover:underline"
-                        onClick={() => handleDelete(item._id)}
-                      >
-                        <MdOutlineDelete size={22} />
-                      </button>
-                      <button
-                        className="text-blue-600 hover:underline"
-                        onClick={() => toggleForm(item)}
-                      >
-                        <FaEdit size={22} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" className="text-center py-4 text-gray-500">
-                    No expired records found
+                          }
+                        )
+                      : "Invalid date"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-green-800">
+                    {vehicle.expiresIn}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    ${vehicle.premium.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {vehicle.phonenumber}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    <button
+                      onClick={() => toggleForm(vehicle)}
+                      className="text-blue-600 hover:text-blue-700 mr-4"
+                    >
+                      <FaEdit size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(vehicle._id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <MdOutlineDelete size={20} />
+                    </button>
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -421,4 +404,4 @@ const ExpiredInsurance = () => {
   );
 };
 
-export default ExpiredInsurance;
+export default ActiveTable;

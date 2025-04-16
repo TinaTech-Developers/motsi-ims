@@ -21,6 +21,7 @@ const AboutToExpireTable = () => {
   const [formData, setFormData] = useState({
     vehicleId: "",
     ownerName: "",
+    vehicleName: "",
     endDate: "",
     premium: "",
     phonenumber: "",
@@ -76,6 +77,7 @@ const AboutToExpireTable = () => {
 
     const newData = {
       vehiclereg: formData.vehicleId.trim(),
+      vehicleName: formData.vehicleName.trim(),
       ownername: formData.ownerName.trim(),
       zinarastart: new Date().toISOString().split("T")[0],
       zinaraend: formData.endDate.trim(),
@@ -149,6 +151,7 @@ const AboutToExpireTable = () => {
     const formData = new FormData(e.target);
     const vehicleData = {
       vehicleId: formData.get("vehicleId"),
+      vehicleName: formData.get("vehicleName"),
       ownerName: formData.get("ownerName"),
       startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
@@ -257,6 +260,15 @@ const AboutToExpireTable = () => {
                 required
                 onChange={handleChange}
                 defaultValue={editingVehicle?.ownername || ""}
+                className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                name="vehicleName"
+                placeholder="Vehicle Name"
+                required
+                onChange={handleChange}
+                defaultValue={editingVehicle?.vehicleName || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
