@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -73,18 +74,26 @@ const LoginPage = () => {
             >
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-2 px-3 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-2 px-3 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-3 text-sm text-blue-500 focus:outline-none text-center"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
-
           <div>
             <button
               type="submit"
@@ -93,7 +102,6 @@ const LoginPage = () => {
               Log In
             </button>
           </div>
-
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <a href="#" className="text-indigo-600 hover:text-indigo-500">

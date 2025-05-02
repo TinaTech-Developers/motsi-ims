@@ -27,9 +27,18 @@ const ClientTable = () => {
     phonenumber: "",
     insurance: "",
   });
+  const [sortAsc, setSortAsc] = useState(true);
   const [userId, setUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState(""); // Search query state
-
+  const handleSortByZinaraStart = () => {
+    const sorted = [...data].sort((a, b) => {
+      const dateA = new Date(a.zinarastart);
+      const dateB = new Date(b.zinarastart);
+      return sortAsc ? dateA - dateB : dateB - dateA;
+    });
+    setSortAsc(!sortAsc);
+    setData(sorted);
+  };
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -220,7 +229,7 @@ const ClientTable = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Client Records
+            Clients Records
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -234,8 +243,7 @@ const ClientTable = () => {
           </button>
         </div>
 
-        {/* Search input */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <input
             type="text"
             placeholder="Search by Vehicle ID"
@@ -243,9 +251,14 @@ const ClientTable = () => {
             onChange={handleSearchChange}
             className="p-3 border rounded focus:ring-2 focus:ring-blue-500 w-full md:w-1/4"
           />
+          <button
+            onClick={handleSortByZinaraStart}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-800"
+          >
+            Sort by Zinara Start {sortAsc ? "▲" : "▼"}
+          </button>
         </div>
 
-        {/* Show form when 'showForm' is true */}
         {showForm && (
           <form onSubmit={handleFormSubmit} className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -282,7 +295,7 @@ const ClientTable = () => {
                 required
                 placeholder="Phone No."
                 onChange={handleChange}
-                defaultValue={editingVehicle?.zinarastart || ""}
+                defaultValue={editingVehicle?.phonenumber || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -297,7 +310,7 @@ const ClientTable = () => {
                 name="insurance"
                 required
                 onChange={handleChange}
-                defaultValue={editingVehicle?.expiresIn || ""}
+                defaultValue={editingVehicle?.insurance || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select</option>
@@ -337,24 +350,22 @@ const ClientTable = () => {
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Insurance
                 </th>
+
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Zinara End
-                </th>
-                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Status
+                  Zinara Start
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Premium
-                </th> */}
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Vehicle Name
+                  Vehicle
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
                 </th>
-                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Zinara End
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
-                </th> */}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -374,34 +385,25 @@ const ClientTable = () => {
                       {item.insurance}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.zinaraend
-                        ? new Date(item.zinaraend).toLocaleDateString("en-US", {
-                            month: "2-digit",
-                            year: "2-digit",
-                          })
-                        : "Invalid date"}
+                      {new Date(item.zinarastart).toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
                     </td>
-                    {/* <td
-                      className={`py-3 px-4 text-sm font-semibold ${
-                        item.expiresIn === "Active"
-                          ? "text-green-600"
-                          : item.expiresIn === "About to Expire"
-                          ? "text-amber-300"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {item.expiresIn}
-                    </td> */}
-                    {/* <td className="py-3 px-4 text-sm text-gray-700">
-                      ${item.premium.toFixed(2)}
-                    </td> */}
+
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.phonenumber}
                     </td>
-                    {/* <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {new Date(item.zinaraend).toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
+                    </td>
+                    <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button
                         className="text-red-600 hover:underline"
                         onClick={() => handleDelete(item._id)}
@@ -414,12 +416,12 @@ const ClientTable = () => {
                       >
                         <FaEdit size={22} />
                       </button>
-                    </td> */}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                  <td colSpan="10" className="text-center py-4 text-gray-500">
                     No records found
                   </td>
                 </tr>

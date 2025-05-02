@@ -29,8 +29,19 @@ const InsuranceTable = () => {
     phonenumber: "",
     insurance: "",
   });
+  const [sortAsc, setSortAsc] = useState(true);
   const [userId, setUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState(""); // Search query state
+
+  const handleSortByZinaraStart = () => {
+    const sorted = [...data].sort((a, b) => {
+      const dateA = new Date(a.zinarastart);
+      const dateB = new Date(b.zinarastart);
+      return sortAsc ? dateA - dateB : dateB - dateA;
+    });
+    setSortAsc(!sortAsc); // toggle sort direction
+    setData(sorted);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -245,7 +256,7 @@ const InsuranceTable = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-6">
-      <div className="max-w-7xl mx-auto bg-white shadow-lg rounded-lg p-6">
+      <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg p-6">
         {error && (
           <div className="text-red-600 bg-red-100 p-4 mb-4 rounded">
             {error}
@@ -269,7 +280,7 @@ const InsuranceTable = () => {
         </div>
 
         {/* Search input */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-">
           <input
             type="text"
             placeholder="Search by Vehicle ID"
@@ -277,6 +288,12 @@ const InsuranceTable = () => {
             onChange={handleSearchChange}
             className="p-3 border rounded focus:ring-2 focus:ring-blue-500 w-full md:w-1/4"
           />
+          <button
+            onClick={handleSortByZinaraStart}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-800"
+          >
+            Sort by Zinara Start {sortAsc ? "▲" : "▼"}
+          </button>
         </div>
 
         {/* Show form when 'showForm' is true */}
@@ -386,6 +403,12 @@ const InsuranceTable = () => {
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
                 </th>
+                <th
+                  className="py-3 px-2 text-sm text-gray-600 uppercase text-start cursor-pointer"
+                  onClick={handleSortByZinaraStart}
+                >
+                  Zinara Start {sortAsc ? "▲" : "▼"}
+                </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
                 </th>
@@ -415,6 +438,7 @@ const InsuranceTable = () => {
                           })
                         : "Invalid date"}
                     </td>
+
                     <td
                       className={`py-3 px-4 text-sm font-semibold ${
                         item.expiresIn === "Active"
@@ -432,8 +456,20 @@ const InsuranceTable = () => {
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}
                     </td>
+
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.phonenumber}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {item.zinarastart
+                        ? new Date(item.zinarastart).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "2-digit",
+                              year: "2-digit",
+                            }
+                          )
+                        : "Invalid date"}
                     </td>
                     <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button

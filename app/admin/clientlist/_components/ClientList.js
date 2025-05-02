@@ -13,11 +13,12 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-const ClientTable = () => {
+const InsuranceTable = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [editingVehicle, setEditingVehicle] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
   const [formData, setFormData] = useState({
     vehicleId: "",
     vehicleName: "",
@@ -28,7 +29,17 @@ const ClientTable = () => {
     insurance: "",
   });
   const [userId, setUserId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(""); // Search query state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSortByZinaraStart = () => {
+    const sorted = [...data].sort((a, b) => {
+      const dateA = new Date(a.zinarastart);
+      const dateB = new Date(b.zinarastart);
+      return sortAsc ? dateA - dateB : dateB - dateA;
+    });
+    setSortAsc(!sortAsc);
+    setData(sorted);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -83,8 +94,8 @@ const ClientTable = () => {
       }
 
       const result = await response.json();
-      setData([...data, result.data]); // Add new entry to state
-      setShowForm(false); // Hide the form after submission
+      setData([...data, result.data]);
+      setShowForm(false);
     } catch (error) {
       console.error("Submit Error:", error);
       alert(`Failed to submit insurance data: ${error.message}`);
@@ -101,13 +112,12 @@ const ClientTable = () => {
         if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
 
-        // Update status for each item based on expiry date
         const updatedData = jsonData.data.map((item) => ({
           ...item,
           expiresIn: calculateStatus(item.zinaraend),
         }));
 
-        setData(updatedData); // Set updated data with status
+        setData(updatedData);
       } catch (error) {
         console.error("Fetch Error", error);
         alert("Failed to fetch insurance data");
@@ -125,17 +135,12 @@ const ClientTable = () => {
       if (!response.ok) {
         const data = await response.json();
         setError(data.message || "Failed to delete vehicle");
-        return; // Exit early if the deletion was not successful
+        return;
       }
 
-      const result = await response.json();
-      if (Array.isArray(result)) {
-        setData(result); // Directly set the new data array if it's returned
-      } else {
-        setData((prevData) =>
-          prevData.filter((vehicle) => vehicle._id !== vehicleId)
-        );
-      }
+      setData((prevData) =>
+        prevData.filter((vehicle) => vehicle._id !== vehicleId)
+      );
     } catch (err) {
       console.error("Error deleting vehicle:", err);
       setError("Error deleting vehicle");
@@ -144,7 +149,7 @@ const ClientTable = () => {
 
   const toggleForm = (vehicle = null) => {
     setEditingVehicle(vehicle);
-    setShowForm((prevState) => !prevState); // This toggles the form visibility
+    setShowForm((prevState) => !prevState);
   };
 
   const handleFormSubmit = async (e) => {
@@ -154,14 +159,12 @@ const ClientTable = () => {
       vehicleId: formData.get("vehicleId"),
       vehicleName: formData.get("vehicleName"),
       ownerName: formData.get("ownerName"),
-      startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
-      status: formData.get("status"),
       premium: formData.get("premium"),
     };
 
     if (!vehicleData.vehicleId || !vehicleData.endDate) {
-      setError("Vehicle ID and new 'zinaraend' value are required.");
+      setError("Vehicle ID and 'zinaraend' are required.");
       return;
     }
 
@@ -219,7 +222,7 @@ const ClientTable = () => {
 
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Client Records
+            Clients Records
           </h2>
           <button
             onClick={() => toggleForm()}
@@ -233,8 +236,7 @@ const ClientTable = () => {
           </button>
         </div>
 
-        {/* Search input */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <input
             type="text"
             placeholder="Search by Vehicle ID"
@@ -242,9 +244,14 @@ const ClientTable = () => {
             onChange={handleSearchChange}
             className="p-3 border rounded focus:ring-2 focus:ring-blue-500 w-full md:w-1/4"
           />
+          <button
+            onClick={handleSortByZinaraStart}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-800"
+          >
+            Sort by Zinara Start {sortAsc ? "▲" : "▼"}
+          </button>
         </div>
 
-        {/* Show form when 'showForm' is true */}
         {showForm && (
           <form onSubmit={handleFormSubmit} className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -281,7 +288,7 @@ const ClientTable = () => {
                 required
                 placeholder="Phone No."
                 onChange={handleChange}
-                defaultValue={editingVehicle?.zinarastart || ""}
+                defaultValue={editingVehicle?.phonenumber || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
@@ -296,7 +303,7 @@ const ClientTable = () => {
                 name="insurance"
                 required
                 onChange={handleChange}
-                defaultValue={editingVehicle?.expiresIn || ""}
+                defaultValue={editingVehicle?.insurance || ""}
                 className="p-3 border rounded focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select</option>
@@ -336,20 +343,18 @@ const ClientTable = () => {
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Insurance
                 </th>
+
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Zinara End
-                </th>
-                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Status
+                  Zinara Start
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Premium
-                </th> */}
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
-                  Vehicle Name
+                  Vehicle
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Phone No.
+                </th>
+                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                  Zinara End
                 </th>
                 <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
@@ -373,32 +378,23 @@ const ClientTable = () => {
                       {item.insurance}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
-                      {item.zinaraend
-                        ? new Date(item.zinaraend).toLocaleDateString("en-US", {
-                            month: "2-digit",
-                            year: "2-digit",
-                          })
-                        : "Invalid date"}
+                      {new Date(item.zinarastart).toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
                     </td>
-                    {/* <td
-                      className={`py-3 px-4 text-sm font-semibold ${
-                        item.expiresIn === "Active"
-                          ? "text-green-600"
-                          : item.expiresIn === "About to Expire"
-                          ? "text-amber-300"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {item.expiresIn}
-                    </td> */}
-                    {/* <td className="py-3 px-4 text-sm text-gray-700">
-                      ${item.premium.toFixed(2)}
-                    </td> */}
+
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.phonenumber}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-700">
+                      {new Date(item.zinaraend).toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
                     </td>
                     <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button
@@ -418,7 +414,7 @@ const ClientTable = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-4 text-gray-500">
+                  <td colSpan="10" className="text-center py-4 text-gray-500">
                     No records found
                   </td>
                 </tr>
@@ -431,4 +427,4 @@ const ClientTable = () => {
   );
 };
 
-export default ClientTable;
+export default InsuranceTable;
