@@ -63,3 +63,45 @@ export async function PUT(req, { params }) {
     );
   }
 }
+
+export async function DELETE(req, { params }) {
+  try {
+    let { userId } = params;
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "User ID is required." },
+        { status: 400 }
+      );
+    }
+
+    // Clean up userId string
+    userId = userId.trim();
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return NextResponse.json(
+        { message: "Invalid User ID." },
+        { status: 400 }
+      );
+    }
+
+    await dbConnect();
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return NextResponse.json({ message: "User not found." }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { message: "User deleted successfully." },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return NextResponse.json(
+      { message: "Internal server error." },
+      { status: 500 }
+    );
+  }
+}

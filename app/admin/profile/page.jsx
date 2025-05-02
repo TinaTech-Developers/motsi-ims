@@ -6,7 +6,6 @@ import { jwtDecode } from "jwt-decode";
 import useAuth from "@/hooks/useAuth";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import CircularJSON from "circular-json";
 
 const AdminProfilePage = () => {
   const { isLoading } = useAuth();
@@ -71,6 +70,48 @@ const AdminProfilePage = () => {
       });
     } catch (error) {
       console.error("Fetch user details error:", error);
+    }
+  };
+  const removeUser = async (userId) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("You are not authorized. Please log in again.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this user?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`/api/register/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Safely attempt to parse JSON only if there is content
+      let result = {};
+      const text = await response.text();
+      if (text) {
+        result = JSON.parse(text);
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to delete user");
+      }
+
+      toast.success("User removed successfully");
+
+      // Update the local state to remove the deleted user
+      setData((prevData) => prevData.filter((user) => user._id !== userId));
+    } catch (error) {
+      console.error("Delete user error:", error);
+      toast.error(`Error: ${error.message}`);
     }
   };
 
@@ -479,7 +520,7 @@ const AdminProfilePage = () => {
                     )}
 
                     <button
-                      onClick={() => removeUser(user.id)}
+                      onClick={() => removeUser(user._id)}
                       className="px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
                     >
                       Remove User
