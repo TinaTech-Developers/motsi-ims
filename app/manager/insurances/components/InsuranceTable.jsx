@@ -409,9 +409,9 @@ const InsuranceTable = () => {
                 >
                   Zinara Start {sortAsc ? "▲" : "▼"}
                 </th>
-                <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
+                {/* <th className="py-3 px-2 text-sm text-gray-600 uppercase text-start">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -471,7 +471,7 @@ const InsuranceTable = () => {
                           )
                         : "Invalid date"}
                     </td>
-                    <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
+                    {/* <td className="flex items-center justify-start gap-3 py-3 px-4 text-sm">
                       <button
                         className="text-red-600 hover:underline"
                         onClick={() => handleDelete(item._id)}
@@ -484,7 +484,7 @@ const InsuranceTable = () => {
                       >
                         <FaEdit size={22} />
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ) : (
