@@ -13,6 +13,38 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
+// ✅ New: Utility to check if date is in current month
+const isInCurrentMonth = (dateStr) => {
+  const date = new Date(dateStr);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth()
+  );
+};
+
+// ✅ New: Calculate float and integer premiums separately
+const calculateMonthlyPremiums = (data) => {
+  let floatTotal = 0;
+  let intTotal = 0;
+
+  data.forEach((item) => {
+    if (isInCurrentMonth(item.zinarastart)) {
+      const premium = item.premium;
+      if (!Number.isInteger(premium)) {
+        floatTotal += premium;
+      } else {
+        intTotal += premium;
+      }
+    }
+  });
+
+  return {
+    floatTotal: floatTotal,
+    intTotal: intTotal.toFixed(2),
+  };
+};
+
 const InsuranceTable = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -29,7 +61,7 @@ const InsuranceTable = () => {
     insurance: "",
   });
   const [userId, setUserId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(""); // Search query state
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSortByZinaraStart = () => {
     const sorted = [...data].sort((a, b) => {
@@ -37,7 +69,7 @@ const InsuranceTable = () => {
       const dateB = new Date(b.zinarastart);
       return sortAsc ? dateA - dateB : dateB - dateA;
     });
-    setSortAsc(!sortAsc); // toggle sort direction
+    setSortAsc(!sortAsc);
     setData(sorted);
   };
 
@@ -94,8 +126,8 @@ const InsuranceTable = () => {
       }
 
       const result = await response.json();
-      setData([...data, result.data]); // Add new entry to state
-      setShowForm(false); // Hide the form after submission
+      setData([...data, result.data]);
+      setShowForm(false);
     } catch (error) {
       console.error("Submit Error:", error);
       alert(`Failed to submit insurance data: ${error.message}`);
@@ -112,13 +144,12 @@ const InsuranceTable = () => {
         if (!response.ok) throw new Error("Failed to fetch data");
         const jsonData = await response.json();
 
-        // Update status for each item based on expiry date
         const updatedData = jsonData.data.map((item) => ({
           ...item,
           expiresIn: calculateStatus(item.zinaraend),
         }));
 
-        setData(updatedData); // Set updated data with status
+        setData(updatedData);
       } catch (error) {
         console.error("Fetch Error", error);
         alert("Failed to fetch insurance data");
@@ -136,12 +167,12 @@ const InsuranceTable = () => {
       if (!response.ok) {
         const data = await response.json();
         setError(data.message || "Failed to delete vehicle");
-        return; // Exit early if the deletion was not successful
+        return;
       }
 
       const result = await response.json();
       if (Array.isArray(result)) {
-        setData(result); // Directly set the new data array if it's returned
+        setData(result);
       } else {
         setData((prevData) =>
           prevData.filter((vehicle) => vehicle._id !== vehicleId)
@@ -155,7 +186,7 @@ const InsuranceTable = () => {
 
   const toggleForm = (vehicle = null) => {
     setEditingVehicle(vehicle);
-    setShowForm((prevState) => !prevState); // This toggles the form visibility
+    setShowForm((prevState) => !prevState);
   };
 
   const handleFormSubmit = async (e) => {
@@ -171,7 +202,11 @@ const InsuranceTable = () => {
       premium: formData.get("premium"),
     };
 
-    if (!vehicleData.vehicleId || !vehicleData.endDate) {
+    if (
+      !vehicleData.vehicleId ||
+      !vehicleData.endDate ||
+      !vehicleData.premium
+    ) {
       setError("Vehicle ID and new 'zinaraend' value are required.");
       return;
     }
@@ -180,7 +215,10 @@ const InsuranceTable = () => {
       try {
         const response = await fetch(`/api/data?id=${editingVehicle._id}`, {
           method: "PUT",
-          body: JSON.stringify({ zinaraend: vehicleData.endDate }),
+          body: JSON.stringify({
+            zinaraend: vehicleData.endDate,
+            premium: vehicleData.premium,
+          }),
           headers: { "Content-Type": "application/json" },
         });
 
@@ -193,6 +231,7 @@ const InsuranceTable = () => {
                 ? {
                     ...item,
                     zinaraend: vehicleData.endDate,
+                    premium: vehicleData.premium,
                     expiresIn: calculateStatus(vehicleData.endDate),
                   }
                 : item
@@ -219,9 +258,12 @@ const InsuranceTable = () => {
     item.vehiclereg.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // ✅ Calculate monthly totals
+  const { floatTotal, intTotal } = calculateMonthlyPremiums(data);
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-6">
-      <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg p-">
+      <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg p-4">
         {error && (
           <div className="text-red-600 bg-red-100 p-4 mb-4 rounded">
             {error}
@@ -244,8 +286,21 @@ const InsuranceTable = () => {
           </button>
         </div>
 
-        {/* Search input */}
-        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-4">
+        {/* ✅ Premium Totals Display */}
+        <div className="mb-4 bg-gray-100 p-4 rounded">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            Monthly Premium Totals
+          </h3>
+          <p className="text-sm text-gray-700">
+            ZIG Total: <span className="font-semibold">${floatTotal}</span>
+          </p>
+          <p className="text-sm text-gray-700">
+            USD Total: <span className=" font-semibold">${intTotal}</span>
+          </p>
+        </div>
+
+        {/* Search + Sort */}
+        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-">
           <input
             type="text"
             placeholder="Search by Vehicle ID"
@@ -261,7 +316,6 @@ const InsuranceTable = () => {
           </button>
         </div>
 
-        {/* Show form when 'showForm' is true */}
         {showForm && (
           <form onSubmit={handleFormSubmit} className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,6 +377,7 @@ const InsuranceTable = () => {
               </select>
               <input
                 type="number"
+                step="0.01"
                 name="premium"
                 placeholder="Premium"
                 required
@@ -380,6 +435,8 @@ const InsuranceTable = () => {
               </tr>
             </thead>
             <tbody>
+              {/* Table content goes here */}
+
               {filteredData.length > 0 ? (
                 filteredData.map((item) => (
                   <tr
@@ -416,7 +473,7 @@ const InsuranceTable = () => {
                       {item.expiresIn}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
-                      ${item.premium.toFixed(2)}
+                      ${item.premium}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-700">
                       {item.vehicleName}

@@ -151,7 +151,6 @@ const InsuranceTable = () => {
     setEditingVehicle(vehicle);
     setShowForm((prevState) => !prevState);
   };
-
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -159,12 +158,18 @@ const InsuranceTable = () => {
       vehicleId: formData.get("vehicleId"),
       vehicleName: formData.get("vehicleName"),
       ownerName: formData.get("ownerName"),
+      startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
+      status: formData.get("status"),
       premium: formData.get("premium"),
     };
 
-    if (!vehicleData.vehicleId || !vehicleData.endDate) {
-      setError("Vehicle ID and 'zinaraend' are required.");
+    if (
+      !vehicleData.vehicleId ||
+      !vehicleData.endDate ||
+      !vehicleData.premium
+    ) {
+      setError("Vehicle ID and new 'zinaraend' value are required.");
       return;
     }
 
@@ -172,7 +177,10 @@ const InsuranceTable = () => {
       try {
         const response = await fetch(`/api/data?id=${editingVehicle._id}`, {
           method: "PUT",
-          body: JSON.stringify({ zinaraend: vehicleData.endDate }),
+          body: JSON.stringify({
+            zinaraend: vehicleData.endDate,
+            premium: vehicleData.premium,
+          }),
           headers: { "Content-Type": "application/json" },
         });
 
@@ -185,6 +193,7 @@ const InsuranceTable = () => {
                 ? {
                     ...item,
                     zinaraend: vehicleData.endDate,
+                    premium: vehicleData.premium,
                     expiresIn: calculateStatus(vehicleData.endDate),
                   }
                 : item

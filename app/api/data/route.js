@@ -117,7 +117,7 @@ export async function POST(req) {
     const newData = new vehicleData({
       userId,
       vehiclereg,
-      vehicleName, 
+      vehicleName,
       ownername,
       zinarastart,
       zinaraend,
@@ -144,10 +144,10 @@ export async function POST(req) {
 }
 export async function PUT(req) {
   const id = req.nextUrl.searchParams.get("id"); // Extract 'id' from the URL query params
-  const { zinaraend } = await req.json(); // Extract 'zinaraend' from the request body
+  const { zinaraend, premium } = await req.json(); // Extract 'zinaraend' from the request body
 
   // Check if both id and zinaraend are provided
-  if (!id || !zinaraend) {
+  if (!id || !zinaraend || !premium) {
     return NextResponse.json(
       { message: "Vehicle ID and new zinaraend value are required." },
       { status: 400 }
@@ -160,7 +160,8 @@ export async function PUT(req) {
     // Find and update the vehicle data by ID, only updating the zinaraend field
     const updatedVehicle = await vehicleData.findByIdAndUpdate(
       id,
-      { zinaraend }, // Only update the zinaraend field
+      { zinaraend, premium }, // Only update the zinaraend an premium field
+
       { new: true } // Return the updated vehicle
     );
 
