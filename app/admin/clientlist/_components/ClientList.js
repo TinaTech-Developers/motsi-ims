@@ -322,6 +322,7 @@ const InsuranceTable = () => {
               </select>
               <input
                 type="number"
+             s  step="0.01"
                 name="premium"
                 placeholder="Premium"
                 required
