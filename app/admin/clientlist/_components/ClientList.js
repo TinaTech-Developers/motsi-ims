@@ -127,6 +127,11 @@ const InsuranceTable = () => {
   }, []);
 
   const handleDelete = async (vehicleId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this client?"
+    );
+    if (!confirmDelete) return;
+
     try {
       const response = await fetch(`/api/data?id=${vehicleId}`, {
         method: "DELETE",
@@ -138,9 +143,14 @@ const InsuranceTable = () => {
         return;
       }
 
-      setData((prevData) =>
-        prevData.filter((vehicle) => vehicle._id !== vehicleId)
-      );
+      const result = await response.json();
+      if (Array.isArray(result)) {
+        setData(result);
+      } else {
+        setData((prevData) =>
+          prevData.filter((vehicle) => vehicle._id !== vehicleId)
+        );
+      }
     } catch (err) {
       console.error("Error deleting vehicle:", err);
       setError("Error deleting vehicle");
@@ -322,7 +332,8 @@ const InsuranceTable = () => {
               </select>
               <input
                 type="number"
-             s  step="0.01"
+                s
+                step="0.01"
                 name="premium"
                 placeholder="Premium"
                 required

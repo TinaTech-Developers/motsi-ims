@@ -321,6 +321,7 @@ const ClientTable = () => {
               <input
                 type="number"
                 name="premium"
+                step="0.01"
                 placeholder="Premium"
                 required
                 onChange={handleChange}

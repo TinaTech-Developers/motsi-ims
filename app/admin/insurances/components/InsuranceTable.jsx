@@ -161,6 +161,11 @@ const InsuranceTable = () => {
   }, []);
 
   const handleDelete = async (vehicleId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this vehicle?"
+    );
+    if (!confirmDelete) return;
+
     try {
       const response = await fetch(`/api/data?id=${vehicleId}`, {
         method: "DELETE",
