@@ -30,7 +30,9 @@ const calculateMonthlyPremiums = (data) => {
 
   data.forEach((item) => {
     if (isInCurrentMonth(item.zinarastart)) {
-      const premium = item.premium;
+      const premium = parseFloat(item.premium); // ← Ensures premium is a number
+      if (isNaN(premium)) return; // Skip if not a valid number
+
       if (!Number.isInteger(premium)) {
         floatTotal += premium;
       } else {
@@ -40,7 +42,7 @@ const calculateMonthlyPremiums = (data) => {
   });
 
   return {
-    floatTotal: floatTotal,
+    floatTotal: floatTotal.toFixed(2), // Optional: for consistent display
     intTotal: intTotal.toFixed(2),
   };
 };
