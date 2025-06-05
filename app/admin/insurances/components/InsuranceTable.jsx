@@ -13,7 +13,6 @@ const calculateStatus = (endDate) => {
   return "Active";
 };
 
-// ✅ New: Utility to check if date is in current month
 const isInCurrentMonth = (dateStr) => {
   const date = new Date(dateStr);
   const today = new Date();
@@ -23,15 +22,14 @@ const isInCurrentMonth = (dateStr) => {
   );
 };
 
-// ✅ New: Calculate float and integer premiums separately
 const calculateMonthlyPremiums = (data) => {
   let floatTotal = 0;
   let intTotal = 0;
 
   data.forEach((item) => {
     if (isInCurrentMonth(item.zinarastart)) {
-      const premium = parseFloat(item.premium); // ← Ensures premium is a number
-      if (isNaN(premium)) return; // Skip if not a valid number
+      const premium = parseFloat(item.premium);
+      if (isNaN(premium)) return;
 
       if (!Number.isInteger(premium)) {
         floatTotal += premium;
@@ -42,9 +40,65 @@ const calculateMonthlyPremiums = (data) => {
   });
 
   return {
-    floatTotal: floatTotal.toFixed(2), // Optional: for consistent display
+    floatTotal: floatTotal.toFixed(2),
     intTotal: intTotal.toFixed(2),
   };
+};
+
+const getMonthlyPremiumSummary = (data) => {
+  const monthlyTotals = {};
+
+  // Aggregate actual premiums from data
+  data.forEach((item) => {
+    const date = new Date(item.zinarastart);
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-based
+
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    if (!monthlyTotals[key]) {
+      monthlyTotals[key] = { floatTotal: 0, intTotal: 0 };
+    }
+
+    const premium = parseFloat(item.premium);
+    if (isNaN(premium)) return;
+
+    if (!Number.isInteger(premium)) {
+      monthlyTotals[key].floatTotal += premium;
+    } else {
+      monthlyTotals[key].intTotal += premium;
+    }
+  });
+
+  // Fill in all 12 months for current year
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const fullSummary = [];
+
+  for (let month = 0; month < 12; month++) {
+    const key = `${currentYear}-${String(month + 1).padStart(2, "0")}`;
+    const date = new Date(currentYear, month);
+    const label = date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+    });
+
+    const totals = monthlyTotals[key] || { floatTotal: 0, intTotal: 0 };
+
+    fullSummary.push({
+      label,
+      floatTotal: totals.floatTotal.toFixed(2),
+      intTotal: totals.intTotal.toFixed(2),
+    });
+  }
+
+  return fullSummary;
+};
+
+export {
+  calculateStatus,
+  isInCurrentMonth,
+  calculateMonthlyPremiums,
+  getMonthlyPremiumSummary,
 };
 
 const InsuranceTable = () => {
@@ -64,6 +118,7 @@ const InsuranceTable = () => {
   });
   const [userId, setUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const monthlySummaries = getMonthlyPremiumSummary(data);
 
   const handleSortByZinaraStart = () => {
     const sorted = [...data].sort((a, b) => {
@@ -265,9 +320,6 @@ const InsuranceTable = () => {
     item.vehiclereg.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ✅ Calculate monthly totals
-  const { floatTotal, intTotal } = calculateMonthlyPremiums(data);
-
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-6">
       <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg p-4">
@@ -292,18 +344,26 @@ const InsuranceTable = () => {
             {showForm ? "Cancel" : "Add Record"}
           </button>
         </div>
-
-        {/* ✅ Premium Totals Display */}
+        {/* ✅ Monthly Breakdown Display */}
         <div className="mb-4 bg-gray-100 p-4 rounded">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Monthly Premium Totals
+            Premium Totals Per Month
           </h3>
-          <p className="text-sm text-gray-700">
-            ZIG Total: <span className="font-semibold">${floatTotal}</span>
-          </p>
-          <p className="text-sm text-gray-700">
-            USD Total: <span className=" font-semibold">${intTotal}</span>
-          </p>
+          {monthlySummaries.length === 0 ? (
+            <p className="text-sm text-gray-500">No monthly data available.</p>
+          ) : (
+            <ul className="space-y-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {monthlySummaries.map((summary) => (
+                <li key={summary.label} className="text-sm text-gray-700">
+                  <span className="font-semibold">{summary.label}:</span> USD
+                  Total:{" "}
+                  <span className="font-semibold">${summary.intTotal}</span>,
+                  ZIG Total:{" "}
+                  <span className="font-semibold">${summary.floatTotal}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Search + Sort */}
