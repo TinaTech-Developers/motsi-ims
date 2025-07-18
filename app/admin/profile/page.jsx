@@ -23,6 +23,7 @@ const AdminProfilePage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [adminFormData, setAdminFormData] = useState({
     id: "",
     fullName: "",
@@ -36,6 +37,9 @@ const AdminProfilePage = () => {
     role: "User",
     password: "",
   });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -58,23 +62,66 @@ const AdminProfilePage = () => {
       const res = await fetch(`/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) throw new Error("Failed to fetch user details.");
-
       const { user } = await res.json();
-      localStorage.setItem("userId", user._id); // Store _id
+      localStorage.setItem("userId", user._id);
       setUser(user);
       setAdminFormData({
         id: user._id,
         fullName: user.fullname,
         email: user.email,
         role: user.role,
-        password: "********", // Masked password
+        password: "********",
       });
     } catch (error) {
       console.error("Fetch user details error:", error);
     }
   };
+
+  const openEditModal = (user) => {
+    setSelectedUser({ ...user });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setSelectedUser((prevUser) => ({ ...prevUser, [name]: value }));
+  };
+
+  const handleUpdateUser = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`/api/register/${selectedUser._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          role: selectedUser.role,
+          fullname: selectedUser.fullname,
+          email: selectedUser.email,
+          password: selectedUser.password,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("User updated successfully");
+        setIsEditModalOpen(false);
+        setData((prev) =>
+          prev.map((user) =>
+            user._id === selectedUser._id ? { ...user, ...selectedUser } : user
+          )
+        );
+      } else {
+        toast.error(data.message || "Failed to update user");
+      }
+    } catch (error) {
+      toast.error("Something went wrong while updating");
+      console.error(error);
+    }
+  };
+
   const removeUser = async (userId) => {
     const token = localStorage.getItem("token");
 
@@ -565,6 +612,12 @@ const AdminProfilePage = () => {
                     >
                       Remove User
                     </button>
+                    <button
+                      onClick={() => openEditModal(user)}
+                      className="px-4 py-1 bg-blue-500 ml-4 text-white rounded-lg hover:bg-blue-600 mr-2"
+                    >
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -573,6 +626,66 @@ const AdminProfilePage = () => {
         </div>
       </section>
       <ToastContainer />
+      {isEditModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black text-gray-800 bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[400px]">
+            <h3 className="text-xl font-semibold mb-4">Edit User</h3>
+
+            <label className="block text-sm font-medium mb-1">Full Name</label>
+            <input
+              type="text"
+              name="fullname"
+              value={selectedUser.fullname}
+              onChange={handleEditChange}
+              className="mb-3 w-full p-2 border rounded"
+            />
+
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={selectedUser.email}
+              onChange={handleEditChange}
+              className="mb-3 w-full p-2 border rounded"
+            />
+
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={selectedUser.password || ""}
+              onChange={handleEditChange}
+              className="mb-3 w-full p-2 border rounded"
+            />
+
+            <label className="block text-sm font-medium mb-1">Role</label>
+            <select
+              name="role"
+              value={selectedUser.role}
+              onChange={handleEditChange}
+              className="mb-4 w-full p-2 border rounded"
+            >
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+            </select>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };
